@@ -1,6 +1,7 @@
 import json
 import os
 
+from pagesCoppier import Coppier
 from playManager import playManager
 
 config_file = 'config.json'
@@ -20,6 +21,8 @@ except Exception as e:
 
 if config and config['url'] and config['username'] and config['password']:
     # Login and invest
-    manager = playManager()
-    manager.login(config['url'], config['username'], config['password'])
-    manager.play()
+    copy = Coppier(config['url'], config['basketball'], config['username'], config['password'])
+    copy.save_webpage()
+    # manager = playManager()
+    # manager.login(config['url'], config['username'], config['password'])
+    # manager.play()
