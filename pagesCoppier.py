@@ -1,5 +1,4 @@
 from urllib.parse import urljoin, urlparse
-
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -22,8 +21,6 @@ class Coppier():
         self.username = username
         self.password = password
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
-
-
 
     def save_page(self, output_dir, filename="index.html"):
         page_source = self.driver.page_source

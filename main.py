@@ -19,10 +19,19 @@ except json.JSONDecodeError:
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
 
-if config and config['url'] and config['username'] and config['password']:
-    # Login and invest
+
+def copyPages():
     copy = Coppier(config['url'], config['basketball'], config['username'], config['password'])
     copy.save_webpage()
-    # manager = playManager()
-    # manager.login(config['url'], config['username'], config['password'])
-    # manager.play()
+
+
+def play():
+    manager = playManager()
+    manager.login(config['url'], config['basketball'], config['username'], config['password'])
+    manager.play()
+
+
+if config and config['url'] and config['username'] and config['password']:
+    # Login and invest
+    # copyPages()
+    play()
