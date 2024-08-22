@@ -9,6 +9,15 @@ from selenium.webdriver.support import expected_conditions as EC
 global first_team_score, second_team_name, first_team_name, second_team_score, quarter_number, time_left
 
 
+def print_game_data(game_data):
+    # Print the collected game data
+    for game in game_data:
+        print(f"Game: {game['first_team']} vs {game['second_team']}")
+        print(f"Scores: {game['first_team_score']} - {game['second_team_score']}")
+        print(f"Quarter: {game['quarter_number']}, Time Left: {game['time_left']}")
+        print("=" * 40)
+
+
 class playManager():
     def __init__(self, elements, point_difference, refreshTime):
         self.basketballUrl = ""
@@ -93,72 +102,125 @@ class playManager():
         leagues = basketball_section.find_elements(By.CLASS_NAME, 'b537635')
         previous_league_header = None
 
-        for lPosition in range(len(leagues)):
-            league = leagues[lPosition]
-            league_header = league.find_element(By.CLASS_NAME, 'fb51a4d')
+        try:
+            for lPosition in range(len(leagues)):
+                league = leagues[lPosition]
+                league_header = league.find_element(By.CLASS_NAME, 'fb51a4d')
 
-            # Close the previous league if it was opened
-            if previous_league_header:
-                previous_league_header.click()
-                time.sleep(1)  # Wait for the league to collapse
+                # Close the previous league if it was opened
+                if previous_league_header:
+                    previous_league_header.click()
+                    time.sleep(1)  # Wait for the league to collapse
 
-            # Expand the current league if it's collapsed
-            if 'd49b804' not in league.get_attribute('class'):
-                league_header.click()
-                time.sleep(1)  # Wait for the league to expand
+                # Expand the current league if it's collapsed
+                if 'd49b804' not in league.get_attribute('class'):
+                    league_header.click()
+                    time.sleep(1)  # Wait for the league to expand
 
-            # Re-find all games in the current league after expanding
-            games = league.find_elements(By.CLASS_NAME, 'bcb4679')
-            for position in range(len(games)):
-                game = games[position]
-                try:
-                    # Locate elements by the first class and verify the second class
-                    first_team_name_elem = game.find_element(By.CLASS_NAME, 'ed51694')
-                    first_team_name = first_team_name_elem.text
+                # Re-find all games in the current league after expanding
+                games = league.find_elements(By.CLASS_NAME, 'bcb4679')
+                for position in range(len(games)):
+                    game = games[position]
+                    try:
+                        # Locate elements by the first class and verify the second class
+                        first_team_name_elem = game.find_element(By.CLASS_NAME, 'ed51694')
+                        first_team_name = first_team_name_elem.text
 
-                    second_team_name_elem = game.find_element(By.CLASS_NAME, 'e333ea9')
-                    second_team_name = second_team_name_elem.text
+                        second_team_name_elem = game.find_element(By.CLASS_NAME, 'e333ea9')
+                        second_team_name = second_team_name_elem.text
 
-                    team_scores = game.find_elements(By.CLASS_NAME, 'd12a5bc')
+                        team_scores = game.find_elements(By.CLASS_NAME, 'd12a5bc')
 
-                    # Assuming the first element corresponds to the first team's score and the second to the second team's score
-                    if len(team_scores) >= 2:
-                        first_team_score = team_scores[0].text
-                        second_team_score = team_scores[1].text
-                    else:
-                        first_team_score = second_team_score = team_scores[0].text
+                        # Assuming the first element corresponds to the first team's score and the second to the second team's score
+                        if len(team_scores) >= 2:
+                            first_team_score = team_scores[0].text
+                            second_team_score = team_scores[1].text
+                        else:
+                            first_team_score = second_team_score = team_scores[0].text
 
-                    quarter_number_elem = game.find_element(By.CLASS_NAME, 'c669e6b')
-                    quarter_number = quarter_number_elem.text
+                        quarter_number_elem = game.find_element(By.CLASS_NAME, 'c669e6b')
+                        quarter_number = quarter_number_elem.text
 
-                    time_left_elem = game.find_element(By.CLASS_NAME, 'e5892ca')
-                    time_left = time_left_elem.text
+                        time_left_elem = game.find_element(By.CLASS_NAME, 'e5892ca')
+                        time_left = time_left_elem.text
 
-                    newGame = {
-                        'first_team': first_team_name,
-                        'second_team': second_team_name,
-                        'first_team_score': first_team_score,
-                        'second_team_score': second_team_score,
-                        'quarter_number': quarter_number,
-                        'time_left': time_left
-                    }
-                    self.print_game_data([newGame])
-                    # Store collected data
-                    game_data.append(newGame)
+                        newGame = {
+                            'first_team': first_team_name,
+                            'second_team': second_team_name,
+                            'first_team_score': first_team_score,
+                            'second_team_score': second_team_score,
+                            'quarter_number': quarter_number,
+                            'time_left': time_left
+                        }
+                        print_game_data([newGame])
+                        # Store collected data
+                        game_data.append(newGame)
+                        selected_row = self.find_total_table(130)
+                        print(f'The game selected row data is {selected_row}')
 
-                except Exception as e:
-                    print(f"Error collecting data for a game: {e}")
-                    continue
+                    except Exception as e:
+                        print(f"Error collecting data for a game: {e}")
+                        continue
 
-            # Update previous_league_header to current
-            previous_league_header = league_header
+                # Update previous_league_header to current
+                previous_league_header = league_header
 
-        return game_data
+            return game_data
+        except Exception as e:
+            print(f"Error in collect_game_data: {e}")
 
-    def print_game_data(self, game_data):
-        # Print the collected game data
-        for game in game_data:
-            print(f"Game: {game['first_team']} vs {game['second_team']}")
-            print(f"Scores: {game['first_team_score']} - {game['second_team_score']}")
-            print(f"Quarter: {game['quarter_number']}, Time Left: {game['time_left']}")
-            print("=" * 40)
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
+    def find_total_table(self, game_first_total_score):
+        # Find all elements with class 'af3ed13'
+        tables = self.driver.find_elements(By.CLASS_NAME, 'af3ed13')
+
+        for table in tables:
+            try:
+                # Find the header inside the current 'af3ed13' element
+                header = table.find_element(By.CLASS_NAME, 'e68ccea')
+                header_text = header.find_element(By.CLASS_NAME, 'c1a798d').text
+
+                # Check if the header text is 'Total (incl. overtime)'
+                if header_text == 'Total (incl. overtime)':
+                    # If the element does not have the 'show' class, click to expand it
+                    if 'show' not in table.get_attribute('class'):
+                        table.click()
+
+                    # Extract suitable rows
+                    suitable_rows = self.extract_suitable_rows(table, game_first_total_score)
+
+                    # If suitable rows are found, return the one with the smallest Under value
+                    if suitable_rows:
+                        best_row = min(suitable_rows, key=lambda x: x['Under'])
+                        return best_row
+                    return None
+            except Exception as e:
+                print(f"Error finding the Total table: {e}")
+                continue
+
+        return None
+
+    def extract_suitable_rows(self, total_table, game_first_total_score):
+        suitable_rows = []
+
+        # Locate all rows within the table
+        rows = total_table.find_elements(By.CLASS_NAME, 'c7128a0')
+
+        for row in rows:
+            expected_total_score = float(row.find_element(By.CLASS_NAME, 'f4f439a').text)
+            over_value = float(row.find_elements(By.CLASS_NAME, 'ad2e043')[0].text)
+            under_value = float(row.find_elements(By.CLASS_NAME, 'ad2e043')[1].text)
+
+            # Check conditions
+            if (expected_total_score >= game_first_total_score + self.point_difference) and (under_value >= 1.8):
+                row_data = {
+                    "Expected Total Score": expected_total_score,
+                    "Over": over_value,
+                    "Under": under_value
+                }
+                suitable_rows.append(row_data)
+
+        return suitable_rows
