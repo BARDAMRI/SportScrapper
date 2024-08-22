@@ -169,10 +169,6 @@ class playManager():
         except Exception as e:
             print(f"Error in collect_game_data: {e}")
 
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-
     def find_total_table(self, game_first_total_score):
         # Find all elements with class 'af3ed13'
         tables = self.driver.find_elements(By.CLASS_NAME, 'af3ed13')
