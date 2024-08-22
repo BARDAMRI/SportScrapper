@@ -3,5 +3,94 @@
   "live": "https://www.bet365box.com/sportsbook/live",
   "basketball": "https://www.bet365box.com/sportsbook/live/basketball",
   "username": "Pro16",
-  "password": "aa12341234"
+  "password": "aa12341234",
+  "point_difference": 12,
+  "time_between_refreshes_in_sec": 5,
+  "elements": {
+    "basketballEntryPage": {
+      "basketballHeader": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[1]",
+        "className": "dcb1b97 fd852c9",
+        "description": "Header element for the basketball section, identifying the basketball entry page."
+      },
+      "firstLeagueHeader": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[1]",
+        "className": "fb51a4d d49b804",
+        "description": "Header element for the first league in the basketball section."
+      },
+      "firstLeagueGames": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]",
+        "className": "fde662e",
+        "description": "Container for the list of games within the first league."
+      },
+      "firstGameLink": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/a",
+        "className": "bcb4679 e4438f9",
+        "description": "Link to the first game within the first league."
+      }
+    },
+    "basketballMainPage": {
+      "leagueContainer": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div",
+        "className": "db49008",
+        "description": "Container for the list of leagues in the basketball section."
+      },
+      "leagueHeader": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div",
+        "className": "b537635",
+        "description": "Header for each league in the basketball main page."
+      },
+      "leagueGamesContainer": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div/div[2]",
+        "className": "fde662e",
+        "description": "Container for the games within each league in the basketball main page."
+      },
+      "gameLink": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div/div[2]/div/a",
+        "className": "bcb4679",
+        "description": "Link to each game in the league within the basketball main page."
+      }
+    },
+    "gameMainPage": {
+      "teamNames": {
+        "firstTeam": {
+          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[2]/div/p[1]",
+          "className": "ed51694 e4438f9",
+          "description": "Element for the first team's name."
+        },
+        "secondTeam": {
+          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[2]/div/p[2]",
+          "className": "e333ea9 e4438f9",
+          "description": "Element for the second team's name."
+        }
+      },
+      "scores": {
+        "firstTeamScore": {
+          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[3]/p[1]",
+          "className": "d12a5bc acd500f",
+          "description": "Element for the first team's score."
+        },
+        "secondTeamScore": {
+          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[3]/p[2]",
+          "className": "d12a5bc acd500f",
+          "description": "Element for the second team's score."
+        }
+      },
+      "totalScore": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[2]/div[1]/div[2]/div[3]/div[2]/div/div/div[2]/div[1]/p",
+        "className": "f4f439a",
+        "description": "Element displaying the total score of the game."
+      },
+      "quarterTimeLeft": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[1]/p[1]",
+        "className": "e5892ca cc19a74",
+        "description": "Element displaying the time left in the current quarter."
+      },
+      "quarterNumber": {
+        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[1]/p[2]",
+        "className": "c669e6b cc19a74",
+        "description": "Element displaying the current quarter number."
+      }
+    }
+  }
 }

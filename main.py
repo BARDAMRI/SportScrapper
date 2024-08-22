@@ -26,7 +26,7 @@ def copyPages():
 
 
 def play():
-    manager = playManager()
+    manager = playManager(config['elements'], config['point_difference'], config['time_between_refreshes_in_sec'])
     manager.login(config['url'], config['basketball'], config['username'], config['password'])
     manager.play()
 
