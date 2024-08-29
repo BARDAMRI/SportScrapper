@@ -9,8 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 class playManager():
     def __init__(self, logger, elements, point_difference, refreshTime):
-        print(f'Initializing the game manager...')
-        logger.debug(f'Initializing the game manager...')
+        logger.info(f'Initializing the game manager...')
         self.logger = logger
         self.basketballUrl = ""
         self.url = ""
@@ -30,7 +29,6 @@ class playManager():
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
     def login(self, url, basketballUrl, username, password):
-        print('Logging in to the site...')
         self.logger.info('Logging in to the site...')
         self.url = url
         self.basketballUrl = basketballUrl
@@ -112,11 +110,10 @@ class playManager():
                 time.sleep(self.refresh)
 
         except Exception as e:
-            print(f"Faced an error during play method operation: {e}")
             self.logger.error(f"Faced an error during play method operation: {e}")
 
     def collect_game_data(self):
-        print('collecting games data...')
+        global logger
         self.logger.debug('collecting games data...')
         basketball_section = self.driver.find_element(By.XPATH,
                                                       self.elements["consts"]['basketball_section_container_xpath'])
@@ -199,11 +196,9 @@ class playManager():
             self.clean_up_inactive_games(leagues)
 
         except Exception as e:
-            print(f"Error in collect_game_data: {e}")
             self.logger.warning(f"Error in collect_game_data: {e}")
 
     def clean_up_inactive_games(self, active_leagues):
-        print(f'Cleaning games...')
         self.logger.debug(f'Cleaning games...')
         active_game_keys = set()
         for league in active_leagues:
@@ -220,16 +215,13 @@ class playManager():
         for league_name in list(self.basketballLeagues.keys()):
             for game_key in list(self.basketballLeagues[league_name].keys()):
                 if game_key not in active_game_keys:
-                    print(f'Cleaning game {game_key}')
                     self.logger.info(f'Cleaning game {game_key}')
                     del self.basketballLeagues[league_name][game_key]
             if not self.basketballLeagues[league_name]:  # Clean up empty leagues
-                print(f'Cleaning empty league {league_name}')
                 self.logger.info(f'Cleaning empty league {league_name}')
                 del self.basketballLeagues[league_name]
 
     def add_new_game(self, game_key, game_data, league_name):
-        print(f'Adding new game: {game_key}')
         self.logger.debug(f'Adding new game: {game_key}')
         if game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']:
             # The game has not started yet, initialize without setting the first total score
@@ -252,7 +244,6 @@ class playManager():
                 self.basketballLeagues[league_name][game_key] = False
 
     def update_game_data(self, game_key, game_data, league_name):
-        print(f'Updating game {game_data} data')
         self.logger.debug(f'Updating game {game_data} data')
         existing_game = self.basketballLeagues[league_name][game_key]
         # Handle ATS and B quarter cases
@@ -278,7 +269,6 @@ class playManager():
             existing_game.update(game_data)
 
     def handle_selected_rows(self):
-        print('choosing selected total row from table')
         self.logger.debug('choosing selected total row from table')
         # Iterate over all leagues and games
         try:
@@ -299,7 +289,6 @@ class playManager():
             self.logger.warning(f"Error finding selected invest row: {e}")
 
     def find_first_total_in_table(self):
-        print('searching for the first row in the total table')
         self.logger.debug('searching for the first row in the total table')
         # Find all elements with class 'af3ed13'
         tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
@@ -339,7 +328,7 @@ class playManager():
                     # If suitable rows are found, return the one with the smallest Under value
                 return None
             except Exception as e:
-                print(f"Error finding the Total table: {e}")
+                self.logger.warning(f"Error finding the Total table: {e}")
                 continue
 
         return None
@@ -370,7 +359,7 @@ class playManager():
                         return best_row
                     return None
             except Exception as e:
-                print(f"Error finding the Total table: {e}")
+                self.logger.warning(f"Error finding the Total table: {e}")
                 continue
 
         return None
