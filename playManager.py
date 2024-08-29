@@ -8,7 +8,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 class playManager():
-    def __init__(self, elements, point_difference, refreshTime):
+    def __init__(self, logger, elements, point_difference, refreshTime):
+        print(f'Initializing the game manager...')
+        logger.debug(f'Initializing the game manager...')
+        self.logger = logger
         self.basketballUrl = ""
         self.url = ""
         self.username = ""
@@ -28,6 +31,7 @@ class playManager():
 
     def login(self, url, basketballUrl, username, password):
         print('Logging in to the site...')
+        self.logger.info('Logging in to the site...')
         self.url = url
         self.basketballUrl = basketballUrl
         self.username = username
@@ -52,21 +56,50 @@ class playManager():
         self.driver.get(self.basketballUrl)
         time.sleep(3)
 
-        # Find all league headers
-        league_headers = self.driver.find_elements(By.CLASS_NAME, self.elements["consts"]['league_headers_class_name'])
-        for league_header in league_headers:
-            # Check if the league is already expanded (by checking its style attribute)
-            parent_div = league_header.find_element(By.XPATH, self.elements["consts"]['league_header_container_xpath'])
-            if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
-                # If the league is opened, find the first game link
-                first_game_link = parent_div.find_element(By.CLASS_NAME,
-                                                          self.elements["consts"]['first_game_link_class'])
-                first_game_link.click()
-                time.sleep(1)  # Wait for the game page to load
-                break
+        attempt_count = 0
+        max_attempts = 3
+        required_substring = "/sportsbook/live/events/"
+
+        while attempt_count < max_attempts:
+            current_url = self.driver.current_url
+
+            if required_substring not in current_url:
+                print(f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
+                self.logger.warning(
+                    f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
+                # Try to navigate to the correct page by clicking the first game link
+                league_headers = self.driver.find_elements(By.CLASS_NAME,
+                                                           self.elements["consts"]['league_headers_class_name'])
+                for league_header in league_headers:
+                    # Check if the league is already expanded (by checking its style attribute)
+                    parent_div = league_header.find_element(By.XPATH,
+                                                            self.elements["consts"]['league_header_container_xpath'])
+                    if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
+                        # If the league is opened, find the first game link
+                        first_game_link = parent_div.find_element(By.CLASS_NAME,
+                                                                  self.elements["consts"]['first_game_link_class'])
+                        first_game_link.click()
+                        time.sleep(1)  # Wait for the game page to load
+                        break
+
+                # Increment the attempt count
+                attempt_count += 1
+
+                # Check the URL again after attempting to navigate
+                current_url = self.driver.current_url
+                if required_substring in current_url:
+                    self.logger.info("Successfully navigated to the correct page.")
+                    return True  # Exit the loop if the URL is correct now
+            else:
+                self.logger.info("Already on the correct page.")
+                return True  # Exit the loop if the URL is already correct
+
+        if attempt_count == max_attempts:
+            self.logger.critical("Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
+            return False  # Stop the method if the navigation was unsuccessful
 
     def play(self):
-        print('Starting game monitoring...')
+        self.logger.info('Starting game monitoring...')
         try:
             while True:
                 # Collect game data and update the structure directly
@@ -80,8 +113,11 @@ class playManager():
 
         except Exception as e:
             print(f"Faced an error during play method operation: {e}")
+            self.logger.error(f"Faced an error during play method operation: {e}")
 
     def collect_game_data(self):
+        print('collecting games data...')
+        self.logger.debug('collecting games data...')
         basketball_section = self.driver.find_element(By.XPATH,
                                                       self.elements["consts"]['basketball_section_container_xpath'])
 
@@ -131,7 +167,9 @@ class playManager():
 
                         # Create a unique game ID or key
                         game_key = f"{first_team_name} vs {second_team_name}"
-
+                        if game_key in self.basketballLeagues[league_name] and not self.basketballLeagues[league_name]:
+                            # game couldn't be initialized.
+                            continue
                         # Store the game data in a dict format
                         game_data = {
                             self.elements['consts']['first_team']: first_team_name,
@@ -151,7 +189,7 @@ class playManager():
                             self.add_new_game(game_key, game_data, league_name)
 
                     except Exception as e:
-                        print(f"Error collecting data for a game: {e}")
+                        self.logger.warning(f"Error collecting data for a game: {e}")
                         continue
 
                 # Update previous_league_header to current
@@ -162,8 +200,11 @@ class playManager():
 
         except Exception as e:
             print(f"Error in collect_game_data: {e}")
+            self.logger.warning(f"Error in collect_game_data: {e}")
 
     def clean_up_inactive_games(self, active_leagues):
+        print(f'Cleaning games...')
+        self.logger.debug(f'Cleaning games...')
         active_game_keys = set()
         for league in active_leagues:
             league_games = league.find_elements(By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])
@@ -179,11 +220,17 @@ class playManager():
         for league_name in list(self.basketballLeagues.keys()):
             for game_key in list(self.basketballLeagues[league_name].keys()):
                 if game_key not in active_game_keys:
+                    print(f'Cleaning game {game_key}')
+                    self.logger.info(f'Cleaning game {game_key}')
                     del self.basketballLeagues[league_name][game_key]
             if not self.basketballLeagues[league_name]:  # Clean up empty leagues
+                print(f'Cleaning empty league {league_name}')
+                self.logger.info(f'Cleaning empty league {league_name}')
                 del self.basketballLeagues[league_name]
 
     def add_new_game(self, game_key, game_data, league_name):
+        print(f'Adding new game: {game_key}')
+        self.logger.debug(f'Adding new game: {game_key}')
         if game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']:
             # The game has not started yet, initialize without setting the first total score
             self.basketballLeagues[league_name][game_key] = game_data
@@ -200,12 +247,14 @@ class playManager():
                     self.elements['consts']['quarter_number']]
                 game_data[self.elements['consts']['time_left_when_recorded']] = game_data[
                     self.elements['consts']['time_left']]
-
-            self.basketballLeagues[league_name][game_key] = game_data
+                self.basketballLeagues[league_name][game_key] = game_data
+            else:
+                self.basketballLeagues[league_name][game_key] = False
 
     def update_game_data(self, game_key, game_data, league_name):
+        print(f'Updating game {game_data} data')
+        self.logger.debug(f'Updating game {game_data} data')
         existing_game = self.basketballLeagues[league_name][game_key]
-
         # Handle ATS and B quarter cases
         if game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']:
             # Do not update anything if the game is still in ATS
@@ -229,21 +278,29 @@ class playManager():
             existing_game.update(game_data)
 
     def handle_selected_rows(self):
+        print('choosing selected total row from table')
+        self.logger.debug('choosing selected total row from table')
         # Iterate over all leagues and games
-        for league_name, games in self.basketballLeagues.items():
-            for game_key, game_data in games.items():
-                if game_data[self.elements['consts']['first_total_score']]:
-                    # Find the suitable row for betting
-                    selected_row = self.find_total_table(game_data[self.elements['consts']['first_total_score']])
-                    if selected_row:
-                        # Add or update the marked game with the selected row data
-                        self.marked_games[game_key] = {
-                            self.elements['consts']['league_name_field']: league_name,
-                            self.elements['consts']['selected_row_field']: selected_row
-                        }
-                        print(f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
+        try:
+            for league_name, games in self.basketballLeagues.items():
+                for game_key, game_data in games.items():
+                    if game_data and game_data[self.elements['consts']['first_total_score']]:
+                        # Find the suitable row for betting
+                        selected_row = self.find_total_table(game_data[self.elements['consts']['first_total_score']])
+                        if selected_row:
+                            # Add or update the marked game with the selected row data
+                            self.marked_games[game_key] = {
+                                self.elements['consts']['league_name_field']: league_name,
+                                self.elements['consts']['selected_row_field']: selected_row
+                            }
+                            self.logger.debug(
+                                f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
+        except Exception as e:
+            self.logger.warning(f"Error finding selected invest row: {e}")
 
     def find_first_total_in_table(self):
+        print('searching for the first row in the total table')
+        self.logger.debug('searching for the first row in the total table')
         # Find all elements with class 'af3ed13'
         tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
 
