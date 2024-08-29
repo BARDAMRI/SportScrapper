@@ -113,14 +113,13 @@ class playManager():
             self.logger.error(f"Faced an error during play method operation: {e}")
 
     def collect_game_data(self):
-        global logger
         self.logger.debug('collecting games data...')
         basketball_section = self.driver.find_element(By.XPATH,
                                                       self.elements["consts"]['basketball_section_container_xpath'])
 
         leagues = basketball_section.find_elements(By.CLASS_NAME, self.elements["consts"]['leagues_section_class'])
         previous_league_header = None
-
+        current_games_lists = {}
         try:
             for lPosition in range(len(leagues)):
                 league = leagues[lPosition]
@@ -164,6 +163,10 @@ class playManager():
 
                         # Create a unique game ID or key
                         game_key = f"{first_team_name} vs {second_team_name}"
+                        if league_name not in current_games_lists:
+                            current_games_lists[league_name] = []
+                        if game_key not in current_games_lists[league_name]:
+                            current_games_lists[league_name].append(game_key)
                         if game_key in self.basketballLeagues[league_name] and not self.basketballLeagues[league_name]:
                             # game couldn't be initialized.
                             continue
@@ -174,10 +177,7 @@ class playManager():
                             self.elements['consts']['first_team_score']: first_team_score,
                             self.elements['consts']['second_team_score']: second_team_score,
                             self.elements['consts']['quarter_number']: quarter_number,
-                            self.elements['consts']['time_left']: time_left,
-                            self.elements['consts']['first_total_score']: None,
-                            self.elements['consts']['quarter_when_recorded']: None,
-                            self.elements['consts']['time_left_when_recorded']: None
+                            self.elements['consts']['time_left']: time_left
                         }
                         # Check if the game is already in the league, update or add new
                         if game_key in self.basketballLeagues[league_name]:
@@ -193,31 +193,21 @@ class playManager():
                 previous_league_header = league_header
 
             # Remove games that are no longer active
-            self.clean_up_inactive_games(leagues)
+            self.clean_up_inactive_games(current_games_lists)
 
         except Exception as e:
             self.logger.warning(f"Error in collect_game_data: {e}")
 
-    def clean_up_inactive_games(self, active_leagues):
+    def clean_up_inactive_games(self, active_games):
         self.logger.debug(f'Cleaning games...')
-        active_game_keys = set()
-        for league in active_leagues:
-            league_games = league.find_elements(By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])
-            for game in league_games:
-                first_team_name = game.find_element(By.CLASS_NAME,
-                                                    self.elements["consts"]['first_team_name_class']).text
-                second_team_name = game.find_element(By.CLASS_NAME,
-                                                     self.elements["consts"]['second_team_name_class']).text
-                game_key = f"{first_team_name} vs {second_team_name}"
-                active_game_keys.add(game_key)
 
         # Remove games that are no longer in the active game keys
         for league_name in list(self.basketballLeagues.keys()):
             for game_key in list(self.basketballLeagues[league_name].keys()):
-                if game_key not in active_game_keys:
+                if game_key not in active_games[league_name]:
                     self.logger.info(f'Cleaning game {game_key}')
                     del self.basketballLeagues[league_name][game_key]
-            if not self.basketballLeagues[league_name]:  # Clean up empty leagues
+            if league_name not in active_games or not self.basketballLeagues[league_name]:
                 self.logger.info(f'Cleaning empty league {league_name}')
                 del self.basketballLeagues[league_name]
 
@@ -253,11 +243,12 @@ class playManager():
         elif game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['B']:
             # Do not update during break periods
             return
-        elif existing_game[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS'] and game_data[
-            self.elements['consts']['quarter_number']] == self.elements['consts']['1Q']:
+        elif (existing_game[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']
+              and game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['1Q']):
             # Update first_total_score only if quarter 1Q just started
-            if (game_data[self.elements['consts']['time_left']] == self.elements['consts']['10:00'] or
-                    game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59']):
+            if (existing_game[self.elements['consts']['time_left']] == self.elements['consts']['10:00'] and
+                    (game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59']
+                     or game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59'])):
                 existing_game[self.elements['consts']['first_total_score']] = int(
                     game_data[self.elements['consts']['first_team_score']]) + int(
                     game_data[self.elements['consts']['second_team_score']])
@@ -292,9 +283,9 @@ class playManager():
         self.logger.debug('searching for the first row in the total table')
         # Find all elements with class 'af3ed13'
         tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
+        try:
+            for table in tables:
 
-        for table in tables:
-            try:
                 # Find the header inside the current 'af3ed13' element
                 header = table.find_element(By.CLASS_NAME, self.elements['consts']['table_header_class'])
                 header_text = header.find_element(By.CLASS_NAME,
@@ -326,12 +317,12 @@ class playManager():
                         self.elements['consts']['under_text_value']: under_value
                     }
                     # If suitable rows are found, return the one with the smallest Under value
-                return None
-            except Exception as e:
-                self.logger.warning(f"Error finding the Total table: {e}")
-                continue
-
-        return None
+                else:
+                    continue
+            return None
+        except Exception as e:
+            self.logger.warning(f"Error finding the Total table: {e}")
+            return None
 
     def find_total_table(self, game_first_total_score):
         # Find all elements with class 'af3ed13'
