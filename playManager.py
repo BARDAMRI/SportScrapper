@@ -20,6 +20,7 @@ class playManager():
         self.refresh = refreshTime
         self.basketballLeagues = {}  # Dictionary to store leagues and their games
         self.marked_games = {}  # Dictionary to store games marked for betting
+        self.stop_flag = False
 
         # Make the window fullscreen
         chrome_options = webdriver.ChromeOptions()
@@ -96,10 +97,15 @@ class playManager():
             self.logger.critical("Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
             return False  # Stop the method if the navigation was unsuccessful
 
+    def stop(self):
+        """Stops the infinite loop in the play method."""
+        print('Stopping the game loop...')
+        self.stop_flag = True
+
     def play(self):
         self.logger.info('Starting game monitoring...')
         try:
-            while True:
+            while not self.stop_flag:
                 # Collect game data and update the structure directly
                 self.collect_game_data()
 
