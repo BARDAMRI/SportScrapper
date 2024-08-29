@@ -11,7 +11,7 @@ config_path = os.path.join(os.path.dirname(__file__), config_file)
 global logger
 
 
-def initialize_logger(log_file_name="app.log", log_level=logging.INFO, max_file_size=5 * 1024 * 1024, backup_count=5):
+def initialize_logger(log_file_name="SportScrapperLogs.log", log_level=logging.INFO, max_file_size=5 * 1024 * 1024, backup_count=5):
     global logger
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
