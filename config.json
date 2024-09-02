@@ -6,6 +6,14 @@
   "password": "aa12341234",
   "point_difference": 12,
   "time_between_refreshes_in_sec": 5,
+  "DB": {
+    "connection_string": "mongodb+srv://{username}:{password}@sportcluster.3zn92.mongodb.net/?retryWrites=true&w=majority&appName={cluster}",
+    "db_username": "bardamri1702",
+    "db_password": "ktzeP6kgg",
+    "cluster_name": "SportCluster",
+    "db_name": "SportDB",
+    "collection_name": "AccessControl"
+  },
   "elements": {
     "basketballEntryPage": {
       "basketballHeader": {
@@ -125,11 +133,11 @@
       "expanded_league_style": "height: auto;",
       "table_row_over_score_class": "ad2e043",
       "quarter_number_class": "c669e6b",
-      "time_left_class":"e5892ca",
+      "time_left_class": "e5892ca",
       "table_row_under_score_class": "ad2e043",
-      "table_header_class":"e68ccea",
-      "table_header_text_class":"c1a798d",
-      "table_text_value":"Total (incl. overtime)",
+      "table_header_class": "e68ccea",
+      "table_header_text_class": "c1a798d",
+      "table_text_value": "Total (incl. overtime)",
       "show_text_value": "show",
       "under_text_value": "Under",
       "over_text_value": "Over",
@@ -142,12 +150,6 @@
       "4Q": "4Q",
       "10:00": "10:00",
       "09:59": "09:59"
-
-
-
-
-
-
     }
   }
 }

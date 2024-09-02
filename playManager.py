@@ -100,6 +100,7 @@ class playManager():
     def stop(self):
         """Stops the infinite loop in the play method."""
         print('Stopping the game loop...')
+        self.logger('Stopping the game loop...')
         self.stop_flag = True
 
     def play(self):
