@@ -7,10 +7,17 @@ from pagesCoppier import Coppier
 from playManager import playManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtCore import Qt
 
 config_file = 'config.json'
 config_path = os.path.join(os.path.dirname(__file__), config_file)
-global logger, config, cluster_name, collection_name, client, db, collection
+global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window
+
+language = 'he'
+language_button = '🇮🇱'
+translations = {}
 
 
 def initialize_logger(log_file_name="SportScrapperLogs.log", log_level=logging.INFO, max_file_size=5 * 1024 * 1024,
@@ -37,12 +44,20 @@ def initialize_logger(log_file_name="SportScrapperLogs.log", log_level=logging.I
 
 
 def init_configurations():
-    global config
+    global config, translations
     try:
         with open(config_path, 'r') as file:
             config = json.load(file)
             logger.info("Configurations loaded successfully:", config)
-            # You can use the configuration as needed here
+            try:
+                with open('translations.json', 'r') as f:
+                    translations = json.load(f)
+            except FileNotFoundError:
+                logger.error("Error: translations.json file not found.")
+                sys.exit(1)
+            except json.JSONDecodeError:
+                logger.error("Error: Invalid JSON in translations.json.")
+                sys.exit(1)
     except FileNotFoundError:
         logger.info(f"Error: The configuration file '{config_file}' was not found.")
     except json.JSONDecodeError:
@@ -103,17 +118,116 @@ def start_scrapping():
         logger.info('Could not initialize the game. An error occurred during launching the games main page...')
 
 
-def open_ui():
-    logger.info('Opening UI window...')
-    # Proceed to open the UI and start the game duration
-    # Example: self.launch_ui()
-    # TODO: COMPLETE UI.
+def select_language():
+    global language
+    if language == 'he':
+        language = 'en'
+    else:
+        language = 'he'
+    update_ui_language()
+
+
+def update_ui_language():
+    header.setText(translations[language]["project_name"])
+    welcome_message.setText(translations[language]["welcome"])
+    start_button.setText(translations[language]["start_analyze"])
+    language_button.setText("🇺🇸" if language == 'he' else "🇮🇱")
+
+
+def on_closing():
+    print("Window is closing")
+    sys.exit()
+
+
+def open_welcome_window():
+    global header, welcome_message, start_button, language, translations, window, language_button
+
+    app = QApplication(sys.argv)
+
+    # Create the main window
+    window = QWidget()
+    window.setWindowTitle("Sport Scrapper")
+    window.setFixedSize(800, 600)
+
+    # Load and set the background image
+    bg_label = QLabel(window)
+    bg_pixmap = QPixmap("/Users/bardamri/PycharmProjects/SportScrapper/entrancePageImage.png")
+    bg_label.setPixmap(bg_pixmap)
+    bg_label.setScaledContents(True)
+    bg_label.resize(window.size())
+
+    # Top layout for headers
+    top_layout = QVBoxLayout()
+    top_layout.setAlignment(Qt.AlignTop)
+    top_layout.setContentsMargins(0, 20, 0, 0)  # Adjust margins to top
+
+    # Header label
+    header = QLabel(translations[language]["project_name"])
+    header.setStyleSheet("font-size: 36px; font-weight: bold; color: white;")
+    header.setAlignment(Qt.AlignCenter)
+    top_layout.addWidget(header)
+
+    # Welcome message
+    welcome_message = QLabel(translations[language]["welcome"])
+    welcome_message.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+    welcome_message.setAlignment(Qt.AlignCenter)
+    top_layout.addWidget(welcome_message)
+
+    # Overlay layout for central content
+    central_layout = QVBoxLayout()
+    central_layout.setAlignment(Qt.AlignCenter)
+    central_layout.setContentsMargins(0, 150, 0, 50)  # Adjust margins to center the content
+
+    # Start Analyze button
+    start_button = QPushButton(translations[language]["start_analyze"])
+    start_button.setStyleSheet("font-size: 18px; background-color: white; padding: 10px 20px;")
+    start_button.clicked.connect(start_application)
+    central_layout.addWidget(start_button)
+
+    # Create a container widget for top content
+    top_widget = QWidget(window)
+    top_widget.setLayout(top_layout)
+    top_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
+    top_widget.resize(window.size())
+    top_widget.move(0, 0)
+
+    # Create a container widget for central content
+    central_widget = QWidget(window)
+    central_widget.setLayout(central_layout)
+    central_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
+    central_widget.resize(window.size())
+    central_widget.move(0, 0)
+
+    # Language button (flags as text)
+    language_button = QPushButton("🇺🇸" if language == 'he' else "🇮🇱", window)
+    language_button.setStyleSheet("font-size: 18px; background-color: transparent; color: white;")
+    language_button.clicked.connect(select_language)
+    language_button.resize(100, 40)
+    language_button.move(window.width() - 110, 10)
+
+    # Handle window close event
+    app.aboutToQuit.connect(on_closing)
+
+    # Show the window
+    window.show()
+
+    sys.exit(app.exec_())
+
+
+def start_application():
+    if verify_access():
+        start_scrapping()
+    else:
+        logger.warning("Access Denied, You do not have permission to run this software.")
+        sys.exit(1)  # Ensure the program exits if access is denied
 
 
 def start_program_and_play():
-    global logger
-    open_ui()
-    start_scrapping()
+    open_welcome_window()
+
+
+def open_ui():
+    open_welcome_window()
 
 
 if __name__ == '__main__':

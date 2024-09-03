@@ -1,0 +1,12 @@
+{
+    "en": {
+        "welcome": "Welcome",
+        "start_analyze": "Start Analyze",
+        "project_name": "Sport Scrapper"
+    },
+    "he": {
+        "welcome": "ברוך הבא",
+        "start_analyze": "התחל לנתח",
+        "project_name": "מנתח ספורט"
+    }
+}
