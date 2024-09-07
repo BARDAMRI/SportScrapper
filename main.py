@@ -8,13 +8,13 @@ from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt, QThread
 from GameWindow import GameWindow
 
 config_file = 'config.json'
 config_path = os.path.join(os.path.dirname(__file__), config_file)
-global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window
+global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
 
 language = 'he'
 language_button = '🇮🇱'
@@ -109,17 +109,37 @@ def copyPages():
 
 
 def start_scrapping():
-    global game_window
+    global game_window, manager, thread
+
+    # Create a QThread object
+    thread = QThread()
+
+    # Create the PlayManager instance
     manager = PlayManager(logger, config['elements'], config['point_difference'],
                           config['time_between_refreshes_in_sec'], game_window)
+
+    # Move the PlayManager instance to the QThread
+    manager.moveToThread(thread)
+
+    # Connect signals and slots
+    thread.started.connect(manager.play)  # Start the PlayManager's play method when the thread starts
+    manager.finished.connect(thread.quit)  # Quit the thread when PlayManager emits 'finished'
+    manager.finished.connect(manager.deleteLater)  # Delete PlayManager after finishing
+    thread.finished.connect(thread.deleteLater)  # Delete the thread when it's done
+
+    # Start the thread
+    thread.start()
+
+    # Perform login
     init_succeeded = manager.login(config['url'], config['basketball'], config['username'], config['password'])
 
     if init_succeeded:
         logger.info('The game manager was initialized successfully...')
         QApplication.processEvents()
-        manager.play()  # Start the game loop, which updates the game window dynamically
     else:
         logger.info('Could not initialize the game. An error occurred during launching the games main page...')
+        thread.quit()
+        sys.exit(1)
 
 
 def select_language():
@@ -140,6 +160,10 @@ def update_ui_language():
 
 def on_closing():
     print("Window is closing")
+    if thread.isRunning():
+        manager.stop()  # Safely stop the PlayManager thread
+        thread.quit()
+        thread.wait()  # Ensure the thread is stopped before exiting
     sys.exit()
 
 
@@ -247,7 +271,7 @@ def open_ui():
 
 
 if __name__ == '__main__':
-    global cluster_name, collection_name, client, db, collection, config
+    global cluster_name, collection_name, client, db, collection, config, thread, manager
     initialize_logger()
     init_configurations()
     initDB()

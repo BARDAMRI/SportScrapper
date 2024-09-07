@@ -1,3 +1,4 @@
+from PyQt5.QtCore import QObject, pyqtSignal
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -6,8 +7,11 @@ from selenium.webdriver.chrome.options import Options
 import time
 
 
-class PlayManager:
+class PlayManager(QObject):  # Inherit QObject for threading
+    finished = pyqtSignal()  # Signal to emit when the PlayManager is done
+
     def __init__(self, logger, elements, point_difference, refreshTime, game_window):
+        super().__init__()  # Initialize QObject
         logger.info(f'Initializing the game manager...')
         self.logger = logger
         self.basketballUrl = ""
@@ -25,8 +29,8 @@ class PlayManager:
         # Make the window fullscreen and headless
         chrome_options = Options()
 
-        chrome_options.add_argument("--headless")  # This makes the browser invisible
-        # chrome_options.add_argument(self.elements['consts']['full_screen_attribute'])  # Make the window full screen
+        # chrome_options.add_argument("--headless")  # This makes the browser invisible
+        chrome_options.add_argument(self.elements['consts']['full_screen_attribute'])  # Make the window full screen
 
         # Create driver
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
@@ -141,15 +145,18 @@ class PlayManager:
         except Exception as e:
             self.logger.error(f"Faced an error during play method operation: {e}")
             self.driver.close()
+        finally:
+            self.finished.emit()  # Emit signal when done
 
     def collect_game_data(self):
-        self.logger.debug('collecting games data...')
+        self.logger.debug('Collecting games data...')
         basketball_section = self.driver.find_element(By.XPATH,
                                                       self.elements["consts"]['basketball_section_container_xpath'])
 
         leagues = basketball_section.find_elements(By.CLASS_NAME, self.elements["consts"]['leagues_section_class'])
         previous_league_header = None
         current_games_lists = {}
+
         try:
             for lPosition in range(len(leagues)):
                 league = leagues[lPosition]
@@ -174,6 +181,13 @@ class PlayManager:
                 games = league.find_elements(By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])
                 for game in games:
                     try:
+                        # Click on the game to open its page
+                        game.click()
+
+                        # Wait for the game page to load (adjust the waiting mechanism as per your needs)
+                        time.sleep(2)  # You can use WebDriverWait for a better mechanism
+
+                        # After opening the game page, collect the data
                         first_team_name = game.find_element(By.CLASS_NAME,
                                                             self.elements["consts"]['first_team_name_class']).text
                         second_team_name = game.find_element(By.CLASS_NAME,
@@ -198,8 +212,8 @@ class PlayManager:
                         if game_key not in current_games_lists[league_name]:
                             current_games_lists[league_name].append(game_key)
                         if game_key in self.basketballLeagues[league_name] and not self.basketballLeagues[league_name]:
-                            # game couldn't be initialized.
                             continue
+
                         # Store the game data in a dict format
                         game_data = {
                             self.elements['consts']['first_team']: first_team_name,
@@ -209,11 +223,15 @@ class PlayManager:
                             self.elements['consts']['quarter_number']: quarter_number,
                             self.elements['consts']['time_left']: time_left
                         }
+
                         # Check if the game is already in the league, update or add new
-                        if game_key in self.basketballLeagues[league_name]:
+                        if game_key in self.basketballLeagues[league_name] and self.basketballLeagues[league_name][
+                            game_key]:
                             self.update_game_data(game_key, game_data, league_name)
                         else:
                             self.add_new_game(game_key, game_data, league_name)
+
+                        time.sleep(1)  # Wait for the league page to reload
 
                     except Exception as e:
                         self.logger.warning(f"Error collecting data for a game: {e}")
@@ -250,7 +268,7 @@ class PlayManager:
             # The game has started or is in progress, we need to set the first total score and corresponding fields
 
             # Extract the first suitable row from the table
-            first_total_row = self.find_first_total_in_table()
+            first_total_row = self.find_first_total_in_table(game_key)
 
             if first_total_row and first_total_row[self.elements['consts']['total_text_value']]:
                 game_data[self.elements['consts']['first_total_score']] = first_total_row[
@@ -309,7 +327,7 @@ class PlayManager:
         except Exception as e:
             self.logger.warning(f"Error finding selected invest row: {e}")
 
-    def find_first_total_in_table(self):
+    def find_first_total_in_table(self, game_key):
         self.logger.debug('searching for the first row in the total table')
         # Find all elements with class 'af3ed13'
         tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
@@ -324,8 +342,12 @@ class PlayManager:
                 # Check if the header text is 'Total (incl. overtime)'
                 if header_text == self.elements['consts']['table_text_value']:
                     # If the element does not have the 'show' class, click to expand it
-                    if self.elements['consts']['show_text_value'] not in table.get_attribute('class'):
-                        table.click()
+                    try:
+                        if self.elements['consts']['show_text_value'] not in table.get_attribute('class'):
+                            table.click()
+                    except Exception as e:
+                        print('Couldn\'t expand total table')
+                        return None
 
                     rows = table.find_elements(By.CLASS_NAME, self.elements['consts']['table_rows_class'])
                     first_row = rows[0]
@@ -351,7 +373,7 @@ class PlayManager:
                     continue
             return None
         except Exception as e:
-            self.logger.warning(f"Error finding the Total table: {e}")
+            self.logger.warning(f"Error finding the Total table: {game_key}")
             return None
 
     def find_total_table(self, game_first_total_score):
