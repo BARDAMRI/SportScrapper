@@ -4,16 +4,17 @@ import logging
 import sys
 import certifi
 from pagesCoppier import Coppier
-from playManager import playManager
+from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
+from GameWindow import GameWindow
 
 config_file = 'config.json'
 config_path = os.path.join(os.path.dirname(__file__), config_file)
-global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window
+global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window
 
 language = 'he'
 language_button = '🇮🇱'
@@ -78,7 +79,7 @@ def initDB():
     client = MongoClient(connection_string, tlsCAFile=certifi.where())
     try:
         client.admin.command('ping')
-        print('Connection to db succeeded.')
+        logger.info('Connection to db succeeded.')
     except Exception as e:
         logger.warning(f'Connection to db failed: {e}')
         sys.exit(1)
@@ -108,12 +109,15 @@ def copyPages():
 
 
 def start_scrapping():
-    manager = playManager(logger, config['elements'], config['point_difference'],
-                          config['time_between_refreshes_in_sec'])
+    global game_window
+    manager = PlayManager(logger, config['elements'], config['point_difference'],
+                          config['time_between_refreshes_in_sec'], game_window)
     init_succeeded = manager.login(config['url'], config['basketball'], config['username'], config['password'])
+
     if init_succeeded:
         logger.info('The game manager was initialized successfully...')
-        manager.play()
+        QApplication.processEvents()
+        manager.play()  # Start the game loop, which updates the game window dynamically
     else:
         logger.info('Could not initialize the game. An error occurred during launching the games main page...')
 
@@ -180,7 +184,13 @@ def open_welcome_window():
 
     # Start Analyze button
     start_button = QPushButton(translations[language]["start_analyze"])
-    start_button.setStyleSheet("font-size: 18px; background-color: white; padding: 10px 20px;")
+    start_button.setStyleSheet("""
+        font-size: 22px;
+        font-weight: 900;
+        background-color: white;
+        padding: 10px 20px;
+        border-radius: 15px;
+        """)
     start_button.clicked.connect(start_application)
     central_layout.addWidget(start_button)
 
@@ -215,6 +225,12 @@ def open_welcome_window():
 
 
 def start_application():
+    global game_window
+    # Create and display the game window immediately after access verification
+    game_window = GameWindow()
+    game_window.show()
+    QApplication.processEvents()  # Force the window to display immediately
+
     if verify_access():
         start_scrapping()
     else:

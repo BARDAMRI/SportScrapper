@@ -2,11 +2,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 import time
 
 
-class playManager():
-    def __init__(self, logger, elements, point_difference, refreshTime):
+class PlayManager:
+    def __init__(self, logger, elements, point_difference, refreshTime, game_window):
         logger.info(f'Initializing the game manager...')
         self.logger = logger
         self.basketballUrl = ""
@@ -19,81 +20,100 @@ class playManager():
         self.basketballLeagues = {}  # Dictionary to store leagues and their games
         self.marked_games = {}  # Dictionary to store games marked for betting
         self.stop_flag = False
+        self.game_window = game_window  # Reference to the GameWindow instance
 
-        # Make the window fullscreen
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument(self.elements['consts']['full_screen_attribute'])
+        # Make the window fullscreen and headless
+        chrome_options = Options()
+
+        chrome_options.add_argument("--headless")  # This makes the browser invisible
+        # chrome_options.add_argument(self.elements['consts']['full_screen_attribute'])  # Make the window full screen
 
         # Create driver
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
     def login(self, url, basketballUrl, username, password):
-        self.logger.info('Logging in to the site...')
-        self.url = url
-        self.basketballUrl = basketballUrl
-        self.username = username
-        self.password = password
+        try:
+            self.logger.info('Logging in to the site...')
+            self.url = url
+            self.basketballUrl = basketballUrl
+            self.username = username
+            self.password = password
 
-        # Open the login page
-        self.driver.get(self.url)
+            # Open the login page
+            self.driver.get(self.url)
 
-        # Find and fill the username and password fields, then submit the form
-        username_field = self.driver.find_element(By.NAME, self.elements["consts"]['login_username_element_name'])
-        password_field = self.driver.find_element(By.NAME, self.elements["consts"]['login_password_element_name'])
-        login_button = self.driver.find_element(By.XPATH, self.elements["consts"]['login_bottom_xpath'])
+            # Find and fill the username and password fields, then submit the form
+            username_field = self.driver.find_element(By.NAME, self.elements["consts"]['login_username_element_name'])
+            password_field = self.driver.find_element(By.NAME, self.elements["consts"]['login_password_element_name'])
+            login_button = self.driver.find_element(By.XPATH, self.elements["consts"]['login_bottom_xpath'])
 
-        username_field.send_keys(self.username)
-        password_field.send_keys(self.password)
-        login_button.click()
+            username_field.send_keys(self.username)
+            password_field.send_keys(self.password)
+            login_button.click()
 
-        # Wait for the main page to load
-        time.sleep(3)
+            # Wait for the main page to load
+            time.sleep(3)
 
-        # Navigate to the basketball page after login
-        self.driver.get(self.basketballUrl)
-        time.sleep(3)
+            # Navigate to the basketball page after login
+            self.driver.get(self.basketballUrl)
+            time.sleep(3)
 
-        attempt_count = 0
-        max_attempts = 3
-        required_substring = "/sportsbook/live/events/"
+            attempt_count = 0
+            max_attempts = 3
+            required_substring = "/sportsbook/live/events/"
 
-        while attempt_count < max_attempts:
-            current_url = self.driver.current_url
+            while attempt_count < max_attempts:
+                try:
+                    current_url = self.driver.current_url
+                    if required_substring not in current_url:
+                        self.logger.warning(
+                            f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
+                        # Try to navigate to the correct page by clicking the first game link
+                        league_headers = self.driver.find_elements(By.CLASS_NAME,
+                                                                   self.elements["consts"]['league_headers_class_name'])
+                        for league_header in league_headers:
+                            # Check if the league is already expanded (by checking its style attribute)
+                            parent_div = league_header.find_element(By.XPATH,
+                                                                    self.elements["consts"][
+                                                                        'league_header_container_xpath'])
+                            if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
+                                # If the league is opened, find the first game link
+                                first_game_link = parent_div.find_element(By.CLASS_NAME,
+                                                                          self.elements["consts"][
+                                                                              'first_game_link_class'])
+                                first_game_link.click()
+                                time.sleep(1)  # Wait for the game page to load
+                                break
 
-            if required_substring not in current_url:
-                print(f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
-                self.logger.warning(
-                    f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
-                # Try to navigate to the correct page by clicking the first game link
-                league_headers = self.driver.find_elements(By.CLASS_NAME,
-                                                           self.elements["consts"]['league_headers_class_name'])
-                for league_header in league_headers:
-                    # Check if the league is already expanded (by checking its style attribute)
-                    parent_div = league_header.find_element(By.XPATH,
-                                                            self.elements["consts"]['league_header_container_xpath'])
-                    if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
-                        # If the league is opened, find the first game link
-                        first_game_link = parent_div.find_element(By.CLASS_NAME,
-                                                                  self.elements["consts"]['first_game_link_class'])
-                        first_game_link.click()
-                        time.sleep(1)  # Wait for the game page to load
-                        break
+                        # Increment the attempt count
+                        attempt_count += 1
 
-                # Increment the attempt count
-                attempt_count += 1
+                        # Check the URL again after attempting to navigate
+                        current_url = self.driver.current_url
+                        if required_substring in current_url:
+                            self.logger.info("Successfully navigated to the correct page.")
+                            return True  # Exit the loop if the URL is correct now
+                    else:
+                        self.logger.info("Already on the correct page.")
+                        return True  # Exit the loop if the URL is already correct
 
-                # Check the URL again after attempting to navigate
-                current_url = self.driver.current_url
-                if required_substring in current_url:
-                    self.logger.info("Successfully navigated to the correct page.")
-                    return True  # Exit the loop if the URL is correct now
-            else:
-                self.logger.info("Already on the correct page.")
-                return True  # Exit the loop if the URL is already correct
+                except Exception as e:
+                    self.logger.critical(f"Received an error during game loop: ${e}\n")
+                    return False  # Stop the method if the navigation was unsuccessful
+            if attempt_count == max_attempts:
+                self.logger.critical("Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
+                return False  # Stop the method if the navigation was unsuccessful
 
-        if attempt_count == max_attempts:
-            self.logger.critical("Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
-            return False  # Stop the method if the navigation was unsuccessful
+        except Exception as e:
+            self.logger.critical(f"Received an error during game login process: ${e}\n")
+            return False
+
+    def update_game_window(self):
+        """
+        Updates the game window with the current leagues and games.
+        """
+        self.logger.info('Updating game window...')
+        self.game_window.update_game_data(self.basketballLeagues, self.marked_games)
 
     def stop(self):
         """Stops the infinite loop in the play method."""
@@ -111,11 +131,16 @@ class playManager():
                 # Handle the selected rows for betting
                 self.handle_selected_rows()
 
+                # Update the GameWindow with the latest game data
+                self.update_game_window()
+
                 # Pause for the refresh time before the next iteration
                 time.sleep(self.refresh)
 
+            self.driver.close()
         except Exception as e:
             self.logger.error(f"Faced an error during play method operation: {e}")
+            self.driver.close()
 
     def collect_game_data(self):
         self.logger.debug('collecting games data...')
