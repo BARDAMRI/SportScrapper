@@ -144,8 +144,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
             self.driver.close()
         except Exception as e:
             self.logger.error(f"Faced an error during play method operation: {e}")
-            self.driver.close()
         finally:
+            self.driver.close()
             self.finished.emit()  # Emit signal when done
 
     def collect_game_data(self):
@@ -313,7 +313,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
         try:
             for league_name, games in self.basketballLeagues.items():
                 for game_key, game_data in games.items():
-                    if game_data and game_data[self.elements['consts']['first_total_score']]:
+                    if self.elements['consts']['first_total_score'] in game_data and game_data and game_data[
+                        self.elements['consts']['first_total_score']]:
                         # Find the suitable row for betting
                         selected_row = self.find_total_table(game_data[self.elements['consts']['first_total_score']])
                         if selected_row:
