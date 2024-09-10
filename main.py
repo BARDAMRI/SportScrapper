@@ -53,11 +53,11 @@ def init_configurations():
             try:
                 with open('translations.json', 'r') as f:
                     translations = json.load(f)
-            except FileNotFoundError:
-                logger.error("Error: translations.json file not found.")
+            except FileNotFoundError as e:
+                logger.error(f"Error: translations.json file not found: {str(e)}")
                 sys.exit(1)
-            except json.JSONDecodeError:
-                logger.error("Error: Invalid JSON in translations.json.")
+            except json.JSONDecodeError as e:
+                logger.error(f"Error: Invalid JSON in translations.json: {str(e)}")
                 sys.exit(1)
     except FileNotFoundError:
         logger.info(f"Error: The configuration file '{config_file}' was not found.")
@@ -99,7 +99,7 @@ def verify_access():
             logger.warning("Access denied. Exiting the program.")
             return False
     except Exception as e:
-        print(f"Error during access verification: {e}")
+        logger.error(f"Error during access verification: {e}")
         return False
 
 
@@ -159,7 +159,7 @@ def update_ui_language():
 
 
 def on_closing():
-    print("Window is closing")
+    logger.info("Window is closing")
     if thread.isRunning():
         manager.stop()  # Safely stop the PlayManager thread
         thread.quit()
@@ -249,17 +249,20 @@ def open_welcome_window():
 
 
 def start_application():
-    global game_window
-    # Create and display the game window immediately after access verification
-    game_window = GameWindow()
-    game_window.show()
-    QApplication.processEvents()  # Force the window to display immediately
+    try:
+        global game_window
+        # Create and display the game window immediately after access verification
+        game_window = GameWindow(logger)
+        game_window.show()
+        QApplication.processEvents()  # Force the window to display immediately
 
-    if verify_access():
-        start_scrapping()
-    else:
-        logger.warning("Access Denied, You do not have permission to run this software.")
-        sys.exit(1)  # Ensure the program exits if access is denied
+        if verify_access():
+            start_scrapping()
+        else:
+            logger.warning("Access Denied, You do not have permission to run this software.")
+            sys.exit(1)  # Ensure the program exits if access is denied
+    except Exception as e:
+        logger.error(f'Failed to initialize the game.. Received error : ${str(e)}')
 
 
 def start_program_and_play():
@@ -272,11 +275,27 @@ def open_ui():
 
 if __name__ == '__main__':
     global cluster_name, collection_name, client, db, collection, config, thread, manager
-    initialize_logger()
-    init_configurations()
-    initDB()
-    if config and config['url'] and config['username'] and config['password']:
-        if verify_access():
-            start_program_and_play()
-        else:
+    try:
+        try:
+            initialize_logger()
+            init_configurations()
+            initDB()
+        except Exception as e:
+            if logger:
+                logger.error(f'Failed to load system resources. Error : ${str(e)}')
             sys.exit(1)
+        try:
+            if config and config['url'] and config['username'] and config['password']:
+                if verify_access():
+                    start_program_and_play()
+                else:
+                    sys.exit(1)
+        except Exception as e:
+            if logger:
+                logger.error(f'Received an error during system operation : ${str(e)}')
+            sys.exit(1)
+    except Exception as e:
+        if logger:
+            logger.error(f'Failed to start the system. Error : ${str(e)}')
+        sys.exit(1)
+

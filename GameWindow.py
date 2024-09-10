@@ -1,10 +1,12 @@
-from PyQt5.QtGui import QFont
+import sys
+
+from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget, QTreeWidget, QTreeWidgetItem, QHBoxLayout, QScrollArea
 from PyQt5.QtCore import Qt
 
 
 class GameWindow(QWidget):
-    def __init__(self):
+    def __init__(self, logger):
         super().__init__()
 
         self.league_games_layout = None
@@ -18,64 +20,71 @@ class GameWindow(QWidget):
         self.leagues_data = {}  # To store leagues and games data
         self.marked_games_data = []  # To store marked games
         self.selected_league = None  # To track selected league
+        self.logger = logger
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Sport Scrapper - Game Window")
-        self.setGeometry(100, 100, 1200, 800)
+        try:
+            self.logger.info('Initializing Main game window...')
+            self.setWindowTitle("Sport Scrapper - Game Window")
+            self.setGeometry(100, 100, 1200, 800)
 
-        # Main layout for the whole window
-        main_layout = QVBoxLayout(self)
+            # Main layout for the whole window
+            main_layout = QVBoxLayout(self)
 
-        # Header section
-        header_label = QLabel("Sport Scrapper", self)
-        header_label.setStyleSheet("font-size: 32px; font-weight: bold; text-align: center;")
-        header_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(header_label)
+            # Header section
+            header_label = QLabel("Sport Scrapper", self)
+            header_label.setStyleSheet("font-size: 32px; font-weight: bold; text-align: center;")
+            header_label.setAlignment(Qt.AlignCenter)
+            main_layout.addWidget(header_label)
 
-        # Create a horizontal layout to separate sidebar and main content
-        content_layout = QHBoxLayout()
+            # Create a horizontal layout to separate sidebar and main content
+            content_layout = QHBoxLayout()
 
-        # Sidebar for the leagues list with 30% more space
-        self.sidebar = QTreeWidget()
-        self.sidebar.setHeaderLabel("Leagues")
-        self.sidebar.setStyleSheet("text-align: right;")  # RTL text direction
-        self.sidebar.itemClicked.connect(self.on_league_selected)
-        content_layout.addWidget(self.sidebar, 3)  # Sidebar occupies 26% of the screen width
+            # Sidebar for the leagues list with 30% more space
+            self.sidebar = QTreeWidget()
+            self.sidebar.setHeaderLabel("Leagues")
+            self.sidebar.setStyleSheet("text-align: right;")  # RTL text direction
+            self.sidebar.itemClicked.connect(self.on_league_selected)
+            content_layout.addWidget(self.sidebar, 3)  # Sidebar occupies 26% of the screen width
 
-        # Central layout for main content
-        central_layout = QVBoxLayout()
+            # Central layout for main content
+            central_layout = QVBoxLayout()
 
-        # Scrollable area for marked games
-        marked_games_label = QLabel("Marked Games", self)
-        marked_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        central_layout.addWidget(marked_games_label)
+            # Scrollable area for marked games
+            marked_games_label = QLabel("Marked Games", self)
+            marked_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+            central_layout.addWidget(marked_games_label)
 
-        self.marked_games_area = QScrollArea()
-        self.marked_games_area.setWidgetResizable(True)
-        self.marked_games_widget = QWidget()
-        self.marked_games_layout = QVBoxLayout(self.marked_games_widget)
-        self.marked_games_area.setWidget(self.marked_games_widget)
+            self.marked_games_area = QScrollArea()
+            self.marked_games_area.setWidgetResizable(True)
+            self.marked_games_widget = QWidget()
+            self.marked_games_layout = QVBoxLayout(self.marked_games_widget)
+            self.marked_games_area.setWidget(self.marked_games_widget)
 
-        central_layout.addWidget(self.marked_games_area, 3)  # 30% of remaining space
+            central_layout.addWidget(self.marked_games_area, 3)  # 30% of remaining space
 
-        # Scrollable area for expanded league games
-        league_games_label = QLabel("League Games", self)
-        league_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        central_layout.addWidget(league_games_label)
+            # Scrollable area for expanded league games
+            league_games_label = QLabel("League Games", self)
+            league_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+            central_layout.addWidget(league_games_label)
 
-        self.league_games_area = QScrollArea()
-        self.league_games_area.setWidgetResizable(True)
-        self.league_games_widget = QWidget()
-        self.league_games_layout = QVBoxLayout(self.league_games_widget)
-        self.league_games_area.setWidget(self.league_games_widget)
+            self.league_games_area = QScrollArea()
+            self.league_games_area.setWidgetResizable(True)
+            self.league_games_widget = QWidget()
+            self.league_games_layout = QVBoxLayout(self.league_games_widget)
+            self.league_games_area.setWidget(self.league_games_widget)
 
-        central_layout.addWidget(self.league_games_area, 7)  # Remaining 70% for league games
+            central_layout.addWidget(self.league_games_area, 7)  # Remaining 70% for league games
 
-        content_layout.addLayout(central_layout, 7)  # Main content occupies 74% of the screen width
-        main_layout.addLayout(content_layout)
+            content_layout.addLayout(central_layout, 7)  # Main content occupies 74% of the screen width
+            main_layout.addLayout(content_layout)
 
-        self.show()
+            self.show()
+            self.logger.info('Main game window initialized successfully!')
+        except Exception as e:
+            self.logger.error(f'Failed to ini game window ui on init_ui. Error : ${str(e)}')
+            sys.exit(1)
 
     def update_game_data(self, basketballLeagues, marked_games):
         """Updates both leagues and marked games"""
@@ -140,15 +149,25 @@ class GameWindow(QWidget):
         """Handle league selection and update games display"""
         self.selected_league = item.text(0)
 
-        # Mark the selected league with a black border, green background, and bold text
+        # Mark the selected league with a black border (simulated with background and text color),
+        # green background, and bold text
         for i in range(self.sidebar.topLevelItemCount()):
             league_item = self.sidebar.topLevelItem(i)
+
             if league_item.text(0) == self.selected_league:
-                league_item.setBackground(0, Qt.green)
-                league_item.setFont(0, QFont('Arial', 12, QFont.Bold))
-                league_item.setStyleSheet("border: 2px solid black;")
+                # Set the selected league with green background and bold text
+                league_item.setBackground(0, QColor("green"))
+                league_item.setForeground(0, QColor("white"))
+                font = league_item.font(0)
+                font.setBold(True)
+                league_item.setFont(0, font)
             else:
-                league_item.setBackground(0, Qt.transparent)
+                # Reset the other league items to default
+                league_item.setBackground(0, QColor("transparent"))
+                league_item.setForeground(0, QColor("black"))
+                font = league_item.font(0)
+                font.setBold(False)
+                league_item.setFont(0, font)
 
         # Update the league games and marked games based on the selected league
         self.update_league_games_ui(self.leagues_data, self.marked_games_data)
