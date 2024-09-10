@@ -55,9 +55,13 @@ def init_configurations():
                     translations = json.load(f)
             except FileNotFoundError as e:
                 logger.error(f"Error: translations.json file not found: {str(e)}")
+                if game_window:
+                    game_window.close()
                 sys.exit(1)
             except json.JSONDecodeError as e:
                 logger.error(f"Error: Invalid JSON in translations.json: {str(e)}")
+                if game_window:
+                    game_window.close()
                 sys.exit(1)
     except FileNotFoundError:
         logger.info(f"Error: The configuration file '{config_file}' was not found.")
@@ -82,6 +86,8 @@ def initDB():
         logger.info('Connection to db succeeded.')
     except Exception as e:
         logger.warning(f'Connection to db failed: {e}')
+        if game_window:
+            game_window.close()
         sys.exit(1)
     db = client[db_name]
     collection = db[collection_name]
@@ -260,7 +266,10 @@ def start_application():
             start_scrapping()
         else:
             logger.warning("Access Denied, You do not have permission to run this software.")
+            if game_window:
+                game_window.close()
             sys.exit(1)  # Ensure the program exits if access is denied
+
     except Exception as e:
         logger.error(f'Failed to initialize the game.. Received error : ${str(e)}')
 
@@ -283,19 +292,26 @@ if __name__ == '__main__':
         except Exception as e:
             if logger:
                 logger.error(f'Failed to load system resources. Error : ${str(e)}')
+            if game_window:
+                game_window.close()
             sys.exit(1)
         try:
             if config and config['url'] and config['username'] and config['password']:
                 if verify_access():
                     start_program_and_play()
                 else:
+                    if game_window:
+                        game_window.close()
                     sys.exit(1)
         except Exception as e:
             if logger:
                 logger.error(f'Received an error during system operation : ${str(e)}')
+            if game_window:
+                game_window.close()
             sys.exit(1)
     except Exception as e:
         if logger:
             logger.error(f'Failed to start the system. Error : ${str(e)}')
+        if game_window:
+            game_window.close()
         sys.exit(1)
-

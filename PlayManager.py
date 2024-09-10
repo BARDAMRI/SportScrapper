@@ -25,11 +25,13 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.password = ""
         self.point_difference = point_difference
         self.elements = elements
-        self.refresh = refreshTime
+        self.refresh_elapse_time = refreshTime
         self.basketballLeagues = {}  # Dictionary to store leagues and their games
         self.marked_games = {}  # Dictionary to store games marked for betting
         self.stop_flag = False
         self.game_window = game_window  # Reference to the GameWindow instance
+        self.attempt_count = 0
+        self.max_attempts = 3
 
         # Make the window fullscreen and headless
         chrome_options = Options()
@@ -53,11 +55,56 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.logger.info("Chrome WebDriver successfully launched.")
                 return
             except WebDriverException as e:
-                self.logger.error(f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {max_attempts}.")
+                self.logger.error(
+                    f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {max_attempts}.")
                 attempt_count += 1
 
         self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
         sys.exit(1)
+
+    def open_live_events_window(self, attempt_count, max_attempts, required_substring):
+        while attempt_count < max_attempts:
+            try:
+                current_url = self.driver.current_url
+                if required_substring not in current_url:
+                    self.logger.warning(
+                        f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
+                    # Try to navigate to the correct page by clicking the first game link
+                    league_headers = self.driver.find_elements(By.CLASS_NAME,
+                                                               self.elements["consts"]['league_headers_class_name'])
+                    for league_header in league_headers:
+                        # Check if the league is already expanded (by checking its style attribute)
+                        parent_div = league_header.find_element(By.XPATH,
+                                                                self.elements["consts"][
+                                                                    'league_header_container_xpath'])
+                        if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
+                            # If the league is opened, find the first game link
+                            first_game_link = parent_div.find_element(By.CLASS_NAME,
+                                                                      self.elements["consts"][
+                                                                          'first_game_link_class'])
+                            first_game_link.click()
+                            time.sleep(1)  # Wait for the game page to load
+                            break
+
+                    # Increment the attempt count
+                    attempt_count += 1
+
+                    # Check the URL again after attempting to navigate
+                    current_url = self.driver.current_url
+                    if required_substring in current_url:
+                        self.logger.info("Successfully navigated to the correct page.")
+                        return True  # Exit the loop if the URL is correct now
+                    else:
+                        self.logger.info("Already on the correct page.")
+                        return True  # Exit the loop if the URL is already correct
+
+            except Exception as e:
+                self.logger.critical(f"Received an error during game loop: ${e}\n")
+                return False  # Stop the method if the navigation was unsuccessful
+            if attempt_count == max_attempts:
+                self.logger.critical(
+                    "Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
+                return False  # Stop the method if the navigation was unsuccessful
 
     def login(self, url, basketballUrl, username, password):
         try:
@@ -88,52 +135,9 @@ class PlayManager(QObject):  # Inherit QObject for threading
             # Navigate to the basketball page after login
             self.driver.get(self.basketballUrl)
             time.sleep(3)
-            attempt_count = 0
-            max_attempts = 3
-            required_substring = "/sportsbook/live/events/"
 
-            while attempt_count < max_attempts:
-                try:
-                    current_url = self.driver.current_url
-                    if required_substring not in current_url:
-                        self.logger.warning(
-                            f"URL does not contain '{required_substring}'. Attempting to navigate to the correct page...")
-                        # Try to navigate to the correct page by clicking the first game link
-                        league_headers = self.driver.find_elements(By.CLASS_NAME,
-                                                                   self.elements["consts"]['league_headers_class_name'])
-                        for league_header in league_headers:
-                            # Check if the league is already expanded (by checking its style attribute)
-                            parent_div = league_header.find_element(By.XPATH,
-                                                                    self.elements["consts"][
-                                                                        'league_header_container_xpath'])
-                            if self.elements["consts"]['expanded_league_style'] in parent_div.get_attribute("style"):
-                                # If the league is opened, find the first game link
-                                first_game_link = parent_div.find_element(By.CLASS_NAME,
-                                                                          self.elements["consts"][
-                                                                              'first_game_link_class'])
-                                first_game_link.click()
-                                time.sleep(1)  # Wait for the game page to load
-                                break
-
-                        # Increment the attempt count
-                        attempt_count += 1
-
-                        # Check the URL again after attempting to navigate
-                        current_url = self.driver.current_url
-                        if required_substring in current_url:
-                            self.logger.info("Successfully navigated to the correct page.")
-                            return True  # Exit the loop if the URL is correct now
-                        else:
-                            self.logger.info("Already on the correct page.")
-                            return True  # Exit the loop if the URL is already correct
-
-                except Exception as e:
-                    self.logger.critical(f"Received an error during game loop: ${e}\n")
-                    return False  # Stop the method if the navigation was unsuccessful
-                if attempt_count == max_attempts:
-                    self.logger.critical(
-                        "Failed to navigate to the correct page after 3 attempts. Stopping the operation.")
-                    return False  # Stop the method if the navigation was unsuccessful
+            self.open_live_events_window(self.attempt_count, self.max_attempts,
+                                         self.elements["consts"]['live_events_suffix'])
 
         except TimeoutException as e:
             self.logger.error(f"Timeout error during login process: {str(e)}")
@@ -155,10 +159,12 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.stop_flag = True
 
     def play(self):
-        """Main loop for monitoring game data."""
         self.logger.info('Starting game monitoring...')
         try:
             while not self.stop_flag:
+                if self.elements["consts"]['live_events_suffix'] not in self.driver.current_url:
+                    self.open_live_events_window(self.attempt_count, self.max_attempts,
+                                                 self.elements["consts"]['live_events_suffix'])
                 # Collect game data and update the structure directly
                 self.collect_game_data()
 
@@ -168,12 +174,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 # Update the GameWindow with the latest game data
                 self.update_game_window()
 
-                # Wait for the refresh time before the next iteration
-                WebDriverWait(self.driver, self.refresh).until(lambda driver: False)  # Use refresh as a wait time
-
-        except WebDriverException as e:
-            self.logger.error(f"WebDriver error during play method: {str(e)}")
-            self.retry_driver(Options())  # Attempt to relaunch the WebDriver if it fails
+                time.sleep(self.refresh_elapse_time)
         except Exception as e:
             self.logger.error(f"Unexpected error during play method: {str(e)}")
         finally:
@@ -195,6 +196,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
             for league in leagues:
                 try:
+                    league.click()
                     # Locate and expand the league header if needed
                     league_header = league.find_element(By.CLASS_NAME, self.elements["consts"]['leagues_header_class'])
                     league_name = league_header.text.strip()
@@ -222,9 +224,9 @@ class PlayManager(QObject):  # Inherit QObject for threading
                             self.logger.warning(f"Error collecting data for a game in league {league_name}: {e}")
 
                     previous_league_header = league_header
-
+                    league.click()
                 except NoSuchElementException as e:
-                    self.logger.warning(f"Error processing league {league_name}: {e}")
+                    self.logger.warning(f"Error processing league: {e}")
                     continue
 
             # Remove games that are no longer active

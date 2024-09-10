@@ -23,6 +23,9 @@ class GameWindow(QWidget):
         self.logger = logger
         self.init_ui()
 
+    def close(self):
+        self.close()
+
     def init_ui(self):
         try:
             self.logger.info('Initializing Main game window...')

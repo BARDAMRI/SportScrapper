@@ -101,6 +101,7 @@
       }
     },
     "consts": {
+      "live_events_suffix": "/sportsbook/live/events",
       "first_total_score": "first_total_score",
       "full_screen_attribute": "--start-fullscreen",
       "time_left": "time_left",
