@@ -60,7 +60,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 attempt_count += 1
 
         self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
-        sys.exit(1)
+        raise Exception('Failed to load driver');
 
     def open_live_events_window(self, attempt_count, max_attempts, required_substring):
         while attempt_count < max_attempts:
@@ -136,8 +136,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
             self.driver.get(self.basketballUrl)
             time.sleep(3)
 
-            self.open_live_events_window(self.attempt_count, self.max_attempts,
-                                         self.elements["consts"]['live_events_suffix'])
+            return self.open_live_events_window(self.attempt_count, self.max_attempts,
+                                                self.elements["consts"]['live_events_suffix'])
 
         except TimeoutException as e:
             self.logger.error(f"Timeout error during login process: {str(e)}")
@@ -196,7 +196,6 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
             for league in leagues:
                 try:
-                    league.click()
                     # Locate and expand the league header if needed
                     league_header = league.find_element(By.CLASS_NAME, self.elements["consts"]['leagues_header_class'])
                     league_name = league_header.text.strip()
@@ -205,15 +204,13 @@ class PlayManager(QObject):  # Inherit QObject for threading
                         self.basketballLeagues[league_name] = {}
 
                     # Close the previous league if it was opened
-                    if previous_league_header:
+                    if previous_league_header and self.elements["consts"][
+                        'collapsed_league_class'] in previous_league_header.get_attribute('class'):
                         previous_league_header.click()
-                        wait.until(EC.staleness_of(previous_league_header))  # Wait for the previous league to collapse
 
                     # Expand the current league if it's collapsed
-                    if self.elements["consts"]['collapsed_league_class'] not in league.get_attribute('class'):
+                    if self.elements["consts"]['collapsed_league_class'] not in league_header.get_attribute('class'):
                         league_header.click()
-                        wait.until(EC.presence_of_element_located(
-                            (By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])))
 
                     # Collect data from each game in the league
                     games = league.find_elements(By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])
@@ -224,7 +221,6 @@ class PlayManager(QObject):  # Inherit QObject for threading
                             self.logger.warning(f"Error collecting data for a game in league {league_name}: {e}")
 
                     previous_league_header = league_header
-                    league.click()
                 except NoSuchElementException as e:
                     self.logger.warning(f"Error processing league: {e}")
                     continue
@@ -267,6 +263,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.elements['consts']['second_team']: second_team_name,
                 self.elements['consts']['first_team_score']: first_team_score,
                 self.elements['consts']['second_team_score']: second_team_score,
+                self.elements['consts']['total_score']: (int(first_team_score) + int(second_team_score)),
                 self.elements['consts']['quarter_number']: quarter_number,
                 self.elements['consts']['time_left']: time_left
             }
@@ -278,9 +275,10 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.add_new_game(game_key, game_data, league_name)
 
         except NoSuchElementException as e:
-            self.logger.warning(f"Could not collect data for game {game_key} in league {league_name}: {e}")
+            self.logger.warning(f"Could not collect data for game a in league {league_name}: {str(e)}")
         except TimeoutException as e:
-            self.logger.warning(f"Timeout while collecting game info for game {game_key} in league {league_name}: {e}")
+            self.logger.warning(
+                f"Timeout while collecting game info for a game in league {league_name}: {str(e)}")
 
     def add_new_game(self, game_key, game_data, league_name):
         self.logger.debug(f'Adding new game: {game_key}')
@@ -323,9 +321,11 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 if (existing_game[self.elements['consts']['time_left']] == self.elements['consts']['10:00'] and
                         (game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59']
                          or game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59'])):
-                    existing_game[self.elements['consts']['first_total_score']] = int(
-                        game_data[self.elements['consts']['first_team_score']]) + int(
-                        game_data[self.elements['consts']['second_team_score']])
+                    # The game is in progress, capture the first total score
+                    first_total_row = self.find_first_total_in_table(game_key)
+
+                    existing_game[self.elements['consts']['first_total_score']] = int(first_total_row[
+                        self.elements['consts']['total_text_value']])
                     existing_game[self.elements['consts']['quarter_when_recorded']] = self.elements['consts']['1Q']
                     existing_game[self.elements['consts']['time_left_when_recorded']] = self.elements['consts']['10:00']
                 existing_game.update(game_data)

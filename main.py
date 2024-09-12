@@ -121,8 +121,8 @@ def start_scrapping():
     thread = QThread()
 
     # Create the PlayManager instance
-    manager = PlayManager(logger, config['elements'], config['point_difference'],
-                          config['time_between_refreshes_in_sec'], game_window)
+    manager = PlayManager(logger=logger, elements=config['elements'], point_difference=config['point_difference'],
+                          refreshTime=config['time_between_refreshes_in_sec'], game_window=game_window)
 
     # Move the PlayManager instance to the QThread
     manager.moveToThread(thread)
@@ -258,7 +258,7 @@ def start_application():
     try:
         global game_window
         # Create and display the game window immediately after access verification
-        game_window = GameWindow(logger)
+        game_window = GameWindow(logger=logger, elements=config['elements'])
         game_window.show()
         QApplication.processEvents()  # Force the window to display immediately
 
