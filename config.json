@@ -4,7 +4,7 @@
   "basketball": "https://www.bet365box.com/sportsbook/live/basketball",
   "username": "Pro16",
   "password": "aa12341234",
-  "point_difference": 12,
+  "point_difference": 0,
   "time_between_refreshes_in_sec": 5,
   "DB": {
     "connection_string": "mongodb+srv://{username}:{password}@sportcluster.3zn92.mongodb.net/?retryWrites=true&w=majority&appName={cluster}",

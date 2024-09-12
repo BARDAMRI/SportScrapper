@@ -123,7 +123,7 @@ def start_scrapping():
     # Create the PlayManager instance
     manager = PlayManager(logger=logger, elements=config['elements'], point_difference=config['point_difference'],
                           refreshTime=config['time_between_refreshes_in_sec'], game_window=game_window)
-
+    manager.data_updated.connect(game_window.update_game_data)
     # Move the PlayManager instance to the QThread
     manager.moveToThread(thread)
 

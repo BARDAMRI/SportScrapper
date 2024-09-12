@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 
 class PlayManager(QObject):  # Inherit QObject for threading
     finished = pyqtSignal()  # Signal to emit when the PlayManager is done
+    data_updated = pyqtSignal(dict, dict)  # Signal will emit basketballLeagues and marked_games
 
     def __init__(self, logger, elements, point_difference, refreshTime, game_window):
         super().__init__()  # Initialize QObject
@@ -172,8 +173,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.handle_selected_rows()
 
                 # Update the GameWindow with the latest game data
-                self.update_game_window()
-
+                self.data_updated.emit(self.basketballLeagues, self.marked_games)
                 time.sleep(self.refresh_elapse_time)
         except Exception as e:
             self.logger.error(f"Unexpected error during play method: {str(e)}")
@@ -325,7 +325,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
                     first_total_row = self.find_first_total_in_table(game_key)
 
                     existing_game[self.elements['consts']['first_total_score']] = int(first_total_row[
-                        self.elements['consts']['total_text_value']])
+                                                                                          self.elements['consts'][
+                                                                                              'total_text_value']])
                     existing_game[self.elements['consts']['quarter_when_recorded']] = self.elements['consts']['1Q']
                     existing_game[self.elements['consts']['time_left_when_recorded']] = self.elements['consts']['10:00']
                 existing_game.update(game_data)

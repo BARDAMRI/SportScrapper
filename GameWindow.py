@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget, QTreeWidget, QTreeWidgetItem, QHBoxLayout, QScrollArea, \
     QTableWidget, QTableWidgetItem
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 
 
 class GameWindow(QWidget):
@@ -50,7 +50,7 @@ class GameWindow(QWidget):
             self.sidebar.setHeaderLabel("Leagues")
             self.sidebar.setStyleSheet("text-align: right;")  # RTL text direction
             self.sidebar.itemClicked.connect(self.on_league_selected)
-            content_layout.addWidget(self.sidebar, 3)  # Sidebar occupies 26% of the screen width
+            content_layout.addWidget(self.sidebar, 2)  # Sidebar occupies 26% of the screen width
 
             # Central layout for main content
             central_layout = QVBoxLayout()
@@ -66,7 +66,7 @@ class GameWindow(QWidget):
             self.marked_games_layout = QVBoxLayout(self.marked_games_widget)
             self.marked_games_area.setWidget(self.marked_games_widget)
 
-            central_layout.addWidget(self.marked_games_area, 3)  # 30% of remaining space
+            central_layout.addWidget(self.marked_games_area, 4)  # 30% of remaining space
 
             # Scrollable area for expanded league games
             league_games_label = QLabel("League Games", self)
@@ -90,13 +90,19 @@ class GameWindow(QWidget):
             self.logger.error(f'Failed to initialize game window UI on init_ui. Error: {str(e)}')
             sys.exit(1)
 
+    @pyqtSlot(dict, dict)  # Mark the function as a slot that can be called from another thread
     def update_game_data(self, basketballLeagues, marked_games):
-        """Updates both leagues and marked games"""
-        self.update_league_games_ui(basketballLeagues, marked_games)
-        self.update_marked_games_ui(marked_games)
+        """Updates both leagues and marked games safely."""
+        try:
+            self.logger.info("Updating game data in UI thread...")
+            self.update_league_games_ui(basketballLeagues, marked_games)
+            self.update_marked_games_ui(marked_games)
+        except Exception as e:
+            self.logger.error(f'Received an error during update_game_data operation. Error: ${str(e)}')
 
     def update_marked_games_ui(self, marked_games):
         """Thread-safe method to update marked games."""
+        self.logger.info("Updating marked games ui in UI thread...")
         self.marked_games_data = marked_games
 
         # Clear the existing marked games
@@ -108,16 +114,17 @@ class GameWindow(QWidget):
         # Populate marked games as a table only if a league is selected
         if self.selected_league:
             game_table = QTableWidget()
-            game_table.setColumnCount(len(self.marked_games_data[0].keys()))  # Set columns based on keys
-            game_table.setHorizontalHeaderLabels(self.marked_games_data[0].keys())
+            if self.marked_games_data:
+                game_table.setColumnCount(len(self.marked_games_data[0].keys()))  # Set columns based on keys
+                game_table.setHorizontalHeaderLabels(self.marked_games_data[0].keys())
 
-            for row_index, game in enumerate(self.marked_games_data):
-                if game['league'] == self.selected_league:
-                    game_table.insertRow(row_index)
-                    for col_index, (key, value) in enumerate(game.items()):
-                        game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                for row_index, game in enumerate(self.marked_games_data):
+                    if game['league'] == self.selected_league:
+                        game_table.insertRow(row_index)
+                        for col_index, (key, value) in enumerate(game.items()):
+                            game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
 
-            self.marked_games_layout.addWidget(game_table)
+                self.marked_games_layout.addWidget(game_table)
 
     def update_league_games_ui(self, leagues, marked_games):
         """Thread-safe method to update league games."""
@@ -136,7 +143,7 @@ class GameWindow(QWidget):
                 league_item = QTreeWidgetItem([league])
 
                 # Highlight leagues with marked games
-                if any(game['league'] == league for game in marked_games):
+                if any(game['league_name'] == league for game in marked_games):
                     league_item.setBackground(0, Qt.green)
 
                 self.sidebar.addTopLevelItem(league_item)
@@ -144,17 +151,19 @@ class GameWindow(QWidget):
             # Display games for the selected league as a table
             if self.selected_league and self.selected_league in self.leagues_data:
                 games = self.leagues_data[self.selected_league]
-                game_table = QTableWidget()
-                game_table.setColumnCount(
-                    len(games[list(games.keys())[0]].keys()))  # Set columns based on game dict keys
-                game_table.setHorizontalHeaderLabels(games[list(games.keys())[0]].keys())  # Use keys as column headers
+                if games:
+                    game_table = QTableWidget()
+                    game_table.setColumnCount(
+                        len(games[list(games.keys())[0]].keys()))  # Set columns based on game dict keys
+                    game_table.setHorizontalHeaderLabels(
+                        games[list(games.keys())[0]].keys())  # Use keys as column headers
 
-                for row_index, (game_key, game_data) in enumerate(games.items()):
-                    game_table.insertRow(row_index)
-                    for col_index, (key, value) in enumerate(game_data.items()):
-                        game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    for row_index, (game_key, game_data) in enumerate(games.items()):
+                        game_table.insertRow(row_index)
+                        for col_index, (key, value) in enumerate(game_data.items()):
+                            game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
 
-                self.league_games_layout.addWidget(game_table)
+                    self.league_games_layout.addWidget(game_table)
         except Exception as e:
             self.logger.error(
                 f'Failed to update view for selected league {self.selected_league} in update_league_games_ui. Error: {e}')
