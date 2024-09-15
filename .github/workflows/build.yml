@@ -8,35 +8,48 @@ on:
 permissions:
   contents: write
 
-
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout code from GitHub repository
       - uses: actions/checkout@v2
 
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.x
 
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           pip install pyinstaller certifi pymongo PyQt5 selenium
 
+      # Step 4: Build executable using PyInstaller
       - name: Build executable
         run: pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" src/main.py
 
+      # Step 5: Create a new Git tag (versioning)
       - name: Create a new tag
         id: tag
         run: |
           git tag v1.0.${{ github.run_number }}
           git push origin v1.0.${{ github.run_number }}
 
+      # Step 6: Upload the executable file to the release
+      - name: Upload the executable to the release
+        uses: actions/upload-artifact@v2
+        with:
+          name: SportScrapper-executable
+          path: dist/SportScrapper
+
+      # Step 7: Create a new release on GitHub
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.${{ github.run_number }}
+          files: dist/SportScrapper  # This ensures the actual executable is uploaded
         env:
           GITHUB_TOKEN: ${{ secrets.SS_TOKEN }}
