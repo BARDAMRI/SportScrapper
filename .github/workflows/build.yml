@@ -22,7 +22,7 @@ jobs:
           pip install pyinstaller certifi pymongo PyQt5 selenium
 
       - name: Build executable
-        run: pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" --add-data "logs:logs" src/main.py
+        run: pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" src/main.py
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

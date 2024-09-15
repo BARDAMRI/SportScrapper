@@ -24,13 +24,19 @@ def initialize_logger(log_file_name=os.path.join(os.getcwd(), 'logs', 'SportScra
                       max_file_size=5 * 1024 * 1024,
                       backup_count=5):
     global logger
+
+    log_dir = os.path.join(os.getcwd(), 'logs')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    log_file_path = os.path.join(log_dir, log_file_name)
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
     # Check if the logger already has handlers (to avoid duplicate logging)
     if not logger.handlers:
         console_handler = logging.StreamHandler()
-        file_handler = RotatingFileHandler(log_file_name, maxBytes=max_file_size, backupCount=backup_count)
+        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size, backupCount=backup_count)
         console_handler.setLevel(log_level)
         file_handler.setLevel(log_level)
 
