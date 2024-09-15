@@ -1,4 +1,4 @@
-name: Create Release
+name: Build and Release
 
 on:
   push:
@@ -10,21 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.12'
+          python-version: 3.x
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install pyinstaller certifi pymongo PyQt5 selenium
 
       - name: Build executable
-        run: |
-          pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" src/main.py
+        run: pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" src/main.py
 
       - name: Create a new tag
         id: tag
