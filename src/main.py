@@ -10,10 +10,9 @@ from pymongo import MongoClient
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread
-from GameWindow import GameWindow
+from src.GameWindow import GameWindow
 
-config_file = 'config.json'
-config_path = os.path.join(os.path.dirname(__file__), config_file)
+config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
 global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
 
 language = 'he'
@@ -21,7 +20,8 @@ language_button = '🇮🇱'
 translations = {}
 
 
-def initialize_logger(log_file_name="SportScrapperLogs.log", log_level=logging.INFO, max_file_size=5 * 1024 * 1024,
+def initialize_logger(log_file_name=os.path.join(os.getcwd(), 'logs', 'SportScrapperLogs.log'), log_level=logging.INFO,
+                      max_file_size=5 * 1024 * 1024,
                       backup_count=5):
     global logger
     logger = logging.getLogger(__name__)
@@ -51,7 +51,8 @@ def init_configurations():
             config = json.load(file)
             logger.info("Configurations loaded successfully:", config)
             try:
-                with open('translations.json', 'r') as f:
+                translations_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
+                with open(translations_path, 'r') as f:
                     translations = json.load(f)
             except FileNotFoundError as e:
                 logger.error(f"Error: translations.json file not found: {str(e)}")
@@ -64,11 +65,11 @@ def init_configurations():
                     game_window.close()
                 sys.exit(1)
     except FileNotFoundError:
-        logger.info(f"Error: The configuration file '{config_file}' was not found.")
+        logger.info(f"Error: The translation file '{translations_path}' was not found.")
     except json.JSONDecodeError:
-        logger.info(f"Error: The configuration file '{config_file}' contains invalid JSON.")
+        logger.info(f"Error: The translation file '{translations_path}' contains invalid JSON.")
     except Exception as e:
-        logger.info(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred during translation file loading: {e}")
 
 
 def initDB():
@@ -121,7 +122,8 @@ def start_scrapping():
     thread = QThread()
 
     # Create the PlayManager instance
-    manager = PlayManager(logger=logger, max_try_count=config['max_retry_number'], elements=config['elements'], point_difference=config['point_difference'],
+    manager = PlayManager(logger=logger, max_try_count=config['max_retry_number'], elements=config['elements'],
+                          point_difference=config['point_difference'],
                           refreshTime=config['time_between_refreshes_in_sec'], game_window=game_window)
     manager.data_updated.connect(game_window.update_game_data)
     # Move the PlayManager instance to the QThread
@@ -186,7 +188,7 @@ def open_welcome_window():
 
         # Load and set the background image
         bg_label = QLabel(window)
-        bg_pixmap = QPixmap("/Users/bardamri/PycharmProjects/SportScrapper/entrancePageImage.png")
+        bg_pixmap = QPixmap(os.path.join(os.getcwd(), 'assets', 'entrancePageImage.png'))
         bg_label.setPixmap(bg_pixmap)
         bg_label.setScaledContents(True)
         bg_label.resize(window.size())

@@ -1,0 +1,32 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller certifi pymongo PyQt5 selenium
+
+      - name: Build executable
+        run: pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" --add-data "logs:logs" src/main.py
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/SportScrapper.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.SS_TOKEN }}
