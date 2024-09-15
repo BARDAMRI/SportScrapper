@@ -38,9 +38,9 @@ jobs:
           git tag v1.0.${{ github.run_number }}
           git push origin v1.0.${{ github.run_number }}
 
-      # Step 6: Upload the executable file to the release
+      # Step 6: Upload the executable file to the release using v3
       - name: Upload the executable to the release
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: SportScrapper-executable
           path: dist/SportScrapper
