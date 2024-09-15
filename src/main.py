@@ -57,12 +57,12 @@ def init_configurations():
             except FileNotFoundError as e:
                 logger.error(f"Error: translations.json file not found: {str(e)}")
                 if game_window:
-                    game_window.close()
+                    game_window.close_windows()
                 sys.exit(1)
             except json.JSONDecodeError as e:
                 logger.error(f"Error: Invalid JSON in translations.json: {str(e)}")
                 if game_window:
-                    game_window.close()
+                    game_window.close_windows()
                 sys.exit(1)
     except FileNotFoundError:
         logger.info(f"Error: The translation file '{translations_path}' was not found.")
@@ -88,7 +88,7 @@ def initDB():
     except Exception as e:
         logger.warning(f'Connection to db failed: {e}')
         if game_window:
-            game_window.close()
+            game_window.close_windows()
         sys.exit(1)
     db = client[db_name]
     collection = db[collection_name]
@@ -141,7 +141,7 @@ def start_scrapping():
     # Perform login
     init_succeeded = manager.login(config['url'], config['basketball'], config['username'], config['password'])
 
-    if init_succeeded:
+    if init_succeeded and thread:
         logger.info('The game manager was initialized successfully...')
         QApplication.processEvents()
     else:
@@ -164,6 +164,8 @@ def update_ui_language():
     welcome_message.setText(translations[language]["welcome"])
     start_button.setText(translations[language]["start_analyze"])
     language_button.setText("🇺🇸" if language == 'he' else "🇮🇱")
+    if game_window:
+        game_window.update_translation(translations[language])
 
 
 def on_closing():
@@ -264,7 +266,7 @@ def start_application():
     try:
         global game_window
         # Create and display the game window immediately after access verification
-        game_window = GameWindow(logger=logger, elements=config['elements'])
+        game_window = GameWindow(logger=logger, elements=config['elements'], translation=translations[language])
         game_window.show()
         QApplication.processEvents()  # Force the window to display immediately
 
@@ -273,11 +275,16 @@ def start_application():
         else:
             logger.warning("Access Denied, You do not have permission to run this software.")
             if game_window:
-                game_window.close()
+                game_window.close_windows()
             sys.exit(1)  # Ensure the program exits if access is denied
 
     except Exception as e:
         logger.error(f'Failed to initialize the game.. Received error : ${str(e)}')
+        if thread:
+            thread.quit()
+        if game_window:
+            game_window.close_windows()
+        sys.exit(1)
 
 
 def start_program_and_play():
@@ -299,7 +306,7 @@ if __name__ == '__main__':
             if logger:
                 logger.error(f'Failed to load system resources. Error : ${str(e)}')
             if game_window:
-                game_window.close()
+                game_window.close_windows()
             sys.exit(1)
         try:
             if config and config['url'] and config['username'] and config['password']:
@@ -307,17 +314,17 @@ if __name__ == '__main__':
                     start_program_and_play()
                 else:
                     if game_window:
-                        game_window.close()
+                        game_window.close_windows()
                     sys.exit(1)
         except Exception as e:
             if logger:
                 logger.error(f'Received an error during system operation : ${str(e)}')
             if game_window:
-                game_window.close()
+                game_window.close_windows()
             sys.exit(1)
     except Exception as e:
         if logger:
             logger.error(f'Failed to start the system. Error : ${str(e)}')
         if game_window:
-            game_window.close()
+            game_window.close_windows()
         sys.exit(1)

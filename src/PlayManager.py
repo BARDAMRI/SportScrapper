@@ -44,7 +44,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
         chrome_options.add_argument("--disable-software-rasterizer")
         # Create driver with retry logic
         self.driver = None
-        self.retry_driver(chrome_options)
+        if not self.retry_driver(chrome_options):
+            raise Exception('Failed to load the Web Driver. Exiting...')
 
     def retry_driver(self, chrome_options):
         """Retries launching the WebDriver up to max_attempts in case of failure."""
@@ -488,7 +489,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 return None
             return obj_values[min_index]
         except Exception as e:
-            self.logger.warning(f"Error finding total table: {e}")
+            self.logger.warning(f"Error finding total row.")
             return None
 
     def extract_suitable_rows(self, table_index, curr_row_index, game_first_total_score):

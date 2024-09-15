@@ -1,12 +1,54 @@
 {
-    "en": {
-        "welcome": "Welcome",
-        "start_analyze": "Start Analyze",
-        "project_name": "Sport Scrapper"
-    },
-    "he": {
-        "welcome": "ברוך הבא",
-        "start_analyze": "התחל לנתח",
-        "project_name": "מנתח ספורט"
-    }
+  "en": {
+    "welcome": "Welcome",
+    "start_analyze": "Start Analyze",
+    "project_name": "Sport Scrapper",
+    "Game": "Game",
+    "League": "League",
+    "Current Score": "Current Score",
+    "First Guessed Score": "First Total Score",
+    "Selected Row Number": "Selected Row Number",
+    "Selected Row total Score": "Selected Row total Score",
+    "Selected Row Under Score": "Selected Row Under Score",
+    "Selected Row Over Score": "Selected Row Over Score",
+    "first_team": "First Team",
+    "first_team_score": "First Team Score",
+    "second_team": "Second Team",
+    "second_team_score": "Second Team Score",
+    "total_score": "Total Score",
+    "quarter_number": "quarter number",
+    "time_left": "Time Left",
+    "first_total_score": "First Total Score",
+    "quarter_when_recorded": "Quarter When Recorded",
+    "time_left_when_recorded": "Time Left When Recorded",
+    "Marked Games": "Marked Games",
+    "League Games": "League Games",
+    "Leagues": "Leagues"
+  },
+  "he": {
+    "welcome": "ברוך הבא",
+    "start_analyze": "התחל לנתח",
+    "project_name": "מנתח ספורט",
+    "Game": "משחק",
+    "League": "ליגה",
+    "Current Score": "תוצאה כוללת נוכחית",
+    "First Guessed Score": "תוצאת השערה ראשונית",
+    "Selected Row Number": "מספר שורה של תוצאה ראשונית",
+    "Selected Row total Score": "תוצאת השערה נוכחית",
+    "Selected Row Under Score": "ערך תחתון נוכחי",
+    "Selected Row Over Score": "ערך עליון נוכחי",
+    "first_team": "קבוצה א׳",
+    "first_team_score": "נקודות קבוצה א׳",
+    "second_team": "קבוצה ב׳",
+    "second_team_score": "נקודות קבוצה ב׳",
+    "total_score": "תוצאה כוללת נוכחית",
+    "quarter_number": "רבע נוכחי",
+    "time_left": "זמן נותר",
+    "first_total_score": "תוצאת השערה ראשונית",
+    "quarter_when_recorded": "הרבע בו תועדה התוצאה",
+    "time_left_when_recorded": "הזמן שנותר כשתועדה התוצאה",
+    "Marked Games": "משחקים מסומנים להימור",
+    "League Games": "משחקי הליגה",
+    "Leagues": "ליגות"
+  }
 }

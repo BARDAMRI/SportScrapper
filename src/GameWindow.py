@@ -6,9 +6,9 @@ from PyQt5.QtCore import Qt, pyqtSlot
 
 
 class GameWindow(QWidget):
-    def __init__(self, logger, elements):
+    def __init__(self, logger, elements, translation):
         super().__init__()
-
+        self.translation = translation
         self.league_games_layout = None
         self.league_games_widget = None
         self.marked_games_layout = None
@@ -24,7 +24,7 @@ class GameWindow(QWidget):
         self.init_ui()
         self.elements = elements
 
-    def close(self):
+    def close_windows(self):
         self.close()
 
     def init_ui(self):
@@ -45,18 +45,32 @@ class GameWindow(QWidget):
             # Create a horizontal layout to separate sidebar and main content
             content_layout = QHBoxLayout()
 
-            # Sidebar for the leagues list with 30% more space
+            # Sidebar layout with its own vertical layout
+            sidebar_layout = QVBoxLayout()  # New layout for the sidebar section
+
+            # Add leagues label above the sidebar to match the style of other headers
+            leagues_label = QLabel(self.translation["Leagues"], self)
+            leagues_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+            leagues_label.setAlignment(Qt.AlignCenter)  # Align the label to the center
+
+            # Sidebar for the leagues list
             self.sidebar = QTreeWidget()
-            self.sidebar.setHeaderLabel("Leagues")
-            self.sidebar.setStyleSheet("text-align: right;")  # RTL text direction
+            self.sidebar.setHeaderLabel("")
+            self.sidebar.setStyleSheet("font-size: 12px; font-weight: bold;")
             self.sidebar.itemClicked.connect(self.on_league_selected)
-            content_layout.addWidget(self.sidebar, 2)  # Sidebar occupies 26% of the screen width
+
+            # Add the label and sidebar to the sidebar layout
+            sidebar_layout.addWidget(leagues_label)
+            sidebar_layout.addWidget(self.sidebar)
+
+            # Add sidebar layout to the content layout
+            content_layout.addLayout(sidebar_layout, 2)  # Sidebar occupies 26% of the screen width
 
             # Central layout for main content
             central_layout = QVBoxLayout()
 
             # Scrollable area for marked games
-            marked_games_label = QLabel("Marked Games", self)
+            marked_games_label = QLabel(self.translation["Marked Games"], self)
             marked_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
             central_layout.addWidget(marked_games_label)
 
@@ -69,8 +83,8 @@ class GameWindow(QWidget):
             central_layout.addWidget(self.marked_games_area, 4)  # 30% of remaining space
 
             # Scrollable area for expanded league games
-            league_games_label = QLabel("League Games", self)
-            league_games_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+            league_games_label = QLabel(self.translation["League Games"], self)
+            league_games_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
             central_layout.addWidget(league_games_label)
 
             self.league_games_area = QScrollArea()
@@ -81,7 +95,10 @@ class GameWindow(QWidget):
 
             central_layout.addWidget(self.league_games_area, 7)  # Remaining 70% for league games
 
+            # Add central layout to content layout
             content_layout.addLayout(central_layout, 7)  # Main content occupies 74% of the screen width
+
+            # Add content layout to main layout
             main_layout.addLayout(content_layout)
 
             self.show()
@@ -99,6 +116,9 @@ class GameWindow(QWidget):
             self.update_marked_games_ui(marked_games)
         except Exception as e:
             self.logger.error(f'Received an error during update_game_data operation. Error: ${str(e)}')
+
+    def update_translation(self, translation_new):
+        self.translation = translation_new
 
     def update_marked_games_ui(self, marked_games):
         """Thread-safe method to update marked games."""
@@ -118,8 +138,12 @@ class GameWindow(QWidget):
 
                 if self.marked_games_data:
                     # Setting the columns.
-                    columns = ['Game', 'League', 'Current Score', 'First Guessed Score', 'Selected Row Number',
-                               'Selected Row total Score', 'Selected Row Under Score', 'Selected Row Over Score']
+                    columns = [self.translation['Game'], self.translation['League'],
+                               self.translation['Current Score'], self.translation['First Guessed Score'],
+                               self.translation['Selected Row Number'],
+                               self.translation['Selected Row total Score'],
+                               self.translation['Selected Row Under Score'],
+                               self.translation['Selected Row Over Score']]
                     game_table.setColumnCount(len(columns))  # Set columns based on keys
                     game_table.setHorizontalHeaderLabels(columns)
                     # Populate the table with the marked games
@@ -186,7 +210,9 @@ class GameWindow(QWidget):
                     # Set columns based on the first game's data structure (dynamically set columns based on keys)
                     first_game = next(iter(games.values()))  # Get first game's data
                     game_table.setColumnCount(len(first_game.keys()))
-                    game_table.setHorizontalHeaderLabels(first_game.keys())
+                    columns = first_game.keys()
+                    translated_columns = [self.translation[column] for column in columns]
+                    game_table.setHorizontalHeaderLabels(translated_columns)
 
                     # Populate rows with game data
                     for row_index, (game_key, game_data) in enumerate(games.items()):
