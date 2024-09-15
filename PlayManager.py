@@ -7,7 +7,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, \
+    ElementClickInterceptedException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
 
@@ -16,7 +17,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
     finished = pyqtSignal()  # Signal to emit when the PlayManager is done
     data_updated = pyqtSignal(dict, dict)  # Signal will emit basketballLeagues and marked_games
 
-    def __init__(self, logger, elements, point_difference, refreshTime, game_window):
+    def __init__(self, logger, max_try_count, elements, point_difference, refreshTime, game_window):
         super().__init__()  # Initialize QObject
         logger.info(f'Initializing the game manager...')
         self.logger = logger
@@ -32,11 +33,11 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.stop_flag = False
         self.game_window = game_window  # Reference to the GameWindow instance
         self.attempt_count = 0
-        self.max_attempts = 3
+        self.max_attempts = max_try_count
 
         # Make the window fullscreen and headless
         chrome_options = Options()
-        # chrome_options.add_argument("--headless")  # This makes the browser invisible
+        chrome_options.add_argument("--headless")  # This makes the browser invisible
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -45,23 +46,26 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.driver = None
         self.retry_driver(chrome_options)
 
-    def retry_driver(self, chrome_options, max_attempts=3):
+    def retry_driver(self, chrome_options):
         """Retries launching the WebDriver up to max_attempts in case of failure."""
-        attempt_count = 0
-        while attempt_count < max_attempts:
-            try:
+        try:
+            attempt_count = 0
+            while not self.driver and attempt_count < self.max_attempts:
+                try:
 
-                self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                                               options=chrome_options)
-                self.logger.info("Chrome WebDriver successfully launched.")
-                return
-            except WebDriverException as e:
-                self.logger.error(
-                    f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {max_attempts}.")
-                attempt_count += 1
+                    self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
+                                                   options=chrome_options)
+                    self.logger.info("Chrome WebDriver successfully launched.")
+                    return
+                except WebDriverException as e:
+                    self.logger.error(
+                        f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {self.max_attempts}.")
+                    attempt_count += 1
 
-        self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
-        raise Exception('Failed to load driver');
+            self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
+            return False
+        except Exception as e:
+            self.logger.error(f'Received an error during loading the browser driver in retry_driver.Error: {str(e)}')
 
     def open_live_events_window(self, attempt_count, max_attempts, required_substring):
         while attempt_count < max_attempts:
@@ -83,9 +87,10 @@ class PlayManager(QObject):  # Inherit QObject for threading
                             first_game_link = parent_div.find_element(By.CLASS_NAME,
                                                                       self.elements["consts"][
                                                                           'first_game_link_class'])
-                            first_game_link.click()
-                            time.sleep(1)  # Wait for the game page to load
-                            break
+                            if first_game_link is not None:
+                                first_game_link.click()
+                                time.sleep(1)  # Wait for the game page to load
+                                break
 
                     # Increment the attempt count
                     attempt_count += 1
@@ -100,7 +105,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                         return True  # Exit the loop if the URL is already correct
 
             except Exception as e:
-                self.logger.critical(f"Received an error during game loop: ${e}\n")
+                self.logger.critical(f"Received an error during game loop: {e}\n")
                 return False  # Stop the method if the navigation was unsuccessful
             if attempt_count == max_attempts:
                 self.logger.critical(
@@ -108,51 +113,49 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 return False  # Stop the method if the navigation was unsuccessful
 
     def login(self, url, basketballUrl, username, password):
-        try:
-            self.logger.info('Logging in to the site...')
-            self.url = url
-            self.basketballUrl = basketballUrl
-            self.username = username
-            self.password = password
+        curr_retry = 0
+        while curr_retry < self.max_attempts:
+            try:
+                self.logger.info('Logging in to the site...')
+                self.url = url
+                self.basketballUrl = basketballUrl
+                self.username = username
+                self.password = password
 
-            # Open the login page
-            self.driver.get(self.url)
-            wait = WebDriverWait(self.driver, 10)
+                # Open the login page
+                self.driver.get(self.url)
+                wait = WebDriverWait(self.driver, 10)
 
-            # Find and fill the username and password fields, then submit the form
-            username_field = wait.until(
-                EC.presence_of_element_located((By.NAME, self.elements["consts"]['login_username_element_name'])))
-            password_field = wait.until(
-                EC.presence_of_element_located((By.NAME, self.elements["consts"]['login_password_element_name'])))
-            login_button = wait.until(
-                EC.element_to_be_clickable((By.XPATH, self.elements["consts"]['login_bottom_xpath'])))
+                # Find and fill the username and password fields, then submit the form
+                username_field = wait.until(
+                    EC.presence_of_element_located((By.NAME, self.elements["consts"]['login_username_element_name'])))
+                password_field = wait.until(
+                    EC.presence_of_element_located((By.NAME, self.elements["consts"]['login_password_element_name'])))
+                login_button = wait.until(
+                    EC.element_to_be_clickable((By.XPATH, self.elements["consts"]['login_bottom_xpath'])))
 
-            username_field.send_keys(self.username)
-            password_field.send_keys(self.password)
-            login_button.click()
+                username_field.send_keys(self.username)
+                password_field.send_keys(self.password)
+                if login_button is not None:
+                    login_button.click()
 
-            # Wait for navigation to the main page after login
-            time.sleep(3)
-            # Navigate to the basketball page after login
-            self.driver.get(self.basketballUrl)
-            time.sleep(3)
+                # Wait for navigation to the main page after login
+                time.sleep(3)
+                # Navigate to the basketball page after login
+                self.driver.get(self.basketballUrl)
+                time.sleep(3)
 
-            return self.open_live_events_window(self.attempt_count, self.max_attempts,
-                                                self.elements["consts"]['live_events_suffix'])
+                return self.open_live_events_window(self.attempt_count, self.max_attempts,
+                                                    self.elements["consts"]['live_events_suffix'])
+            except TimeoutException as e:
+                self.logger.error(f"Timeout error during login process: {str(e)}")
+                curr_retry += 1
 
-        except TimeoutException as e:
-            self.logger.error(f"Timeout error during login process: {str(e)}")
-        except Exception as e:
-            self.logger.critical(f"Received an error during game login process: {str(e)}")
-            return False
-
-    def update_game_window(self):
-        """Updates the game window with the current leagues and games."""
-        self.logger.info('Updating game window...')
-        try:
-            self.game_window.update_game_data(self.basketballLeagues, self.marked_games)
-        except Exception as e:
-            self.logger.error(f"Error updating game window: {str(e)}")
+            except Exception as e:
+                self.logger.critical(f"Received an error during game login process: {str(e)}")
+                curr_retry += 1
+        self.driver.quit()
+        return False
 
     def stop(self):
         """Stops the infinite loop in the play method."""
@@ -168,9 +171,6 @@ class PlayManager(QObject):  # Inherit QObject for threading
                                                  self.elements["consts"]['live_events_suffix'])
                 # Collect game data and update the structure directly
                 self.collect_game_data()
-
-                # Handle the selected rows for betting
-                self.handle_selected_rows()
 
                 # Update the GameWindow with the latest game data
                 self.data_updated.emit(self.basketballLeagues, self.marked_games)
@@ -204,8 +204,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
                         self.basketballLeagues[league_name] = {}
 
                     # Close the previous league if it was opened
-                    if previous_league_header and self.elements["consts"][
-                        'collapsed_league_class'] in previous_league_header.get_attribute('class'):
+                    if (previous_league_header and self.elements["consts"][
+                        'collapsed_league_class'] in previous_league_header.get_attribute('class')):
                         previous_league_header.click()
 
                     # Expand the current league if it's collapsed
@@ -214,40 +214,40 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
                     # Collect data from each game in the league
                     games = league.find_elements(By.CLASS_NAME, self.elements["consts"]['games_in_league_class'])
-                    for game in games:
+                    for index, game in enumerate(games):
                         try:
-                            self.collect_game_info(game, league_name, current_games_lists)
+                            self.collect_game_info(index, game, league_name, current_games_lists)
                         except Exception as e:
-                            self.logger.warning(f"Error collecting data for a game in league {league_name}: {e}")
+                            try:
+                                g = game.find_element(By.CLASS_NAME,
+                                                      self.elements["consts"]['first_team_name_class']).text
+                            except Exception:
+                                g = 'Unknown'
+                            self.logger.warning(
+                                f"Error collecting data for a game of team {g} in league {league_name}: {e}")
 
                     previous_league_header = league_header
-                except NoSuchElementException as e:
+                except (NoSuchElementException, Exception) as e:
                     self.logger.warning(f"Error processing league: {e}")
                     continue
 
             # Remove games that are no longer active
             self.clean_up_inactive_games(current_games_lists)
 
-        except TimeoutException as e:
+        except (TimeoutException, Exception) as e:
             self.logger.warning(f"Error in collect_game_data: {str(e)}")
-        except Exception as e:
-            self.logger.error(f"Unexpected error in collect_game_data: {str(e)}")
 
-    def collect_game_info(self, game, league_name, current_games_lists):
+    def collect_game_info(self, game_index, game, league_name, current_games_lists):
         """Helper method to collect information for a specific game."""
         try:
-            # Click on the game to open its details
             game.click()
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, self.elements["consts"]['first_team_name_class'])))
-
             # Collect game data
             first_team_name = game.find_element(By.CLASS_NAME, self.elements["consts"]['first_team_name_class']).text
             second_team_name = game.find_element(By.CLASS_NAME, self.elements["consts"]['second_team_name_class']).text
             team_scores = game.find_elements(By.CLASS_NAME, self.elements["consts"]['game_scores_pair_section'])
 
-            first_team_score = team_scores[0].text if len(team_scores) >= 2 else team_scores[0].text
-            second_team_score = team_scores[1].text if len(team_scores) >= 2 else team_scores[0].text
+            first_team_score = team_scores[0].text if len(team_scores) >= 2 else 0
+            second_team_score = team_scores[1].text if len(team_scores) >= 2 else 0
             quarter_number = game.find_element(By.CLASS_NAME, self.elements["consts"]['quarter_number_class']).text
             time_left = game.find_element(By.CLASS_NAME, self.elements["consts"]['time_left_class']).text
 
@@ -258,6 +258,9 @@ class PlayManager(QObject):  # Inherit QObject for threading
             if game_key not in current_games_lists[league_name]:
                 current_games_lists[league_name].append(game_key)
 
+            if (first_team_name == '' or second_team_name == '' or first_team_score == 'N/A' or
+                    second_team_score == 'N/A' or quarter_number == 'NS' or time_left == '--:--'):
+                return
             game_data = {
                 self.elements['consts']['first_team']: first_team_name,
                 self.elements['consts']['second_team']: second_team_name,
@@ -274,16 +277,21 @@ class PlayManager(QObject):  # Inherit QObject for threading
             else:
                 self.add_new_game(game_key, game_data, league_name)
 
-        except NoSuchElementException as e:
-            self.logger.warning(f"Could not collect data for game a in league {league_name}: {str(e)}")
-        except TimeoutException as e:
+        except (ElementClickInterceptedException, NoSuchElementException, TimeoutException, Exception) as e:
             self.logger.warning(
-                f"Timeout while collecting game info for a game in league {league_name}: {str(e)}")
+                f"Exception on collect_game_info for game at index {game_index} in league {league_name}."
+                f" Retrying...")
+            time.sleep(1)
+            self.collect_game_info(game_index, game, league_name, current_games_lists)  # Retry
 
     def add_new_game(self, game_key, game_data, league_name):
         self.logger.debug(f'Adding new game: {game_key}')
         try:
             # Handle the case where the game has not started yet
+            game_data[self.elements['consts']['first_total_score']] = None
+            game_data[self.elements['consts']['quarter_when_recorded']] = None
+            game_data[self.elements['consts']['time_left_when_recorded']] = None
+
             if game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']:
                 self.basketballLeagues[league_name][game_key] = game_data
             else:
@@ -297,44 +305,52 @@ class PlayManager(QObject):  # Inherit QObject for threading
                         self.elements['consts']['quarter_number']]
                     game_data[self.elements['consts']['time_left_when_recorded']] = game_data[
                         self.elements['consts']['time_left']]
-                    self.basketballLeagues[league_name][game_key] = game_data
-                else:
-                    self.basketballLeagues[league_name][game_key] = False
 
+                self.basketballLeagues[league_name][game_key] = game_data
         except Exception as e:
             self.logger.error(f"Error adding new game {game_key}: {str(e)}")
 
     def update_game_data(self, game_key, game_data, league_name):
         try:
             self.logger.debug(f'Updating game {game_data} data')
+            # Checking if game needed to be add as new game.
             existing_game = self.basketballLeagues[league_name][game_key]
-            # Handle ATS and B quarter cases
-            if game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']:
-                # Do not update anything if the game is still in ATS
+            # Handle ATS and B quarter cases that does not should be updated.
+            if (game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS'] or
+                    self.elements['consts']['B'] in game_data[self.elements['consts']['quarter_number']]):
                 return
-            elif game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['B']:
-                # Do not update during break periods
-                return
-            elif (existing_game[self.elements['consts']['quarter_number']] == self.elements['consts']['ATS']
-                  and game_data[self.elements['consts']['quarter_number']] == self.elements['consts']['1Q']):
-                # Update first_total_score only if quarter 1Q just started
-                if (existing_game[self.elements['consts']['time_left']] == self.elements['consts']['10:00'] and
-                        (game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59']
-                         or game_data[self.elements['consts']['time_left']] == self.elements['consts']['09:59'])):
-                    # The game is in progress, capture the first total score
-                    first_total_row = self.find_first_total_in_table(game_key)
+            # Check if we moved from ats to 1Q value before game starts.
+            if (existing_game['first_total_score'] and existing_game[self.elements['consts']['quarter_number']] ==
+                    self.elements['consts']['ATS'] and game_data[self.elements['consts']['quarter_number']] ==
+                    self.elements['consts']['1Q']):
+                first_total_row = self.find_first_total_in_table(game_key)
+                if first_total_row:
+                    game_data[self.elements['consts']['first_total_score']] = first_total_row[
+                        self.elements['consts']['total_text_value']]
+                    game_data[self.elements['consts']['quarter_when_recorded']] = self.elements['consts']['1Q']
+                    game_data[self.elements['consts']['time_left_when_recorded']] = self.elements['consts']['10:00']
 
-                    existing_game[self.elements['consts']['first_total_score']] = int(first_total_row[
-                                                                                          self.elements['consts'][
-                                                                                              'total_text_value']])
-                    existing_game[self.elements['consts']['quarter_when_recorded']] = self.elements['consts']['1Q']
-                    existing_game[self.elements['consts']['time_left_when_recorded']] = self.elements['consts']['10:00']
-                existing_game.update(game_data)
-            else:
-                # Regular update for the game
-                existing_game.update(game_data)
+            # Update new values.
+            for key in list(game_data.keys()):
+                existing_game[key] = game_data[key]
+            self.check_table_mark(league_name, game_key, existing_game)
         except Exception as e:
-            self.logger.error(f"Error updating game {game_key}: {str(e)}")
+            self.logger.error(f"Error updating game data {game_key}: {str(e)}")
+
+    def check_table_mark(self, league_name, game_key, game_data):
+        if (self.elements['consts']['first_total_score'] and self.elements['consts']['first_total_score'] in game_data
+                and game_data[self.elements['consts']['first_total_score']]):
+            # Find the suitable row for betting
+            selected_row = self.find_selected_total_row(
+                game_data[self.elements['consts']['first_total_score']])
+            if selected_row:
+                # Mark the game for betting
+                self.marked_games[game_key] = {
+                    self.elements['consts']['league_name']: league_name,
+                    self.elements['consts']['selected_row_field']: selected_row
+                }
+                self.logger.debug(
+                    f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
 
     def handle_selected_rows(self):
         """Selects the suitable rows from the total table based on game data."""
@@ -342,17 +358,19 @@ class PlayManager(QObject):  # Inherit QObject for threading
         try:
             for league_name, games in self.basketballLeagues.items():
                 for game_key, game_data in games.items():
-                    if self.elements['consts']['first_total_score'] in game_data:
+                    if self.elements['consts']['first_total_score']:
                         # Find the suitable row for betting
-                        selected_row = self.find_total_table(game_data[self.elements['consts']['first_total_score']])
-                        if selected_row:
-                            # Mark the game for betting
-                            self.marked_games[game_key] = {
-                                self.elements['consts']['league_name_field']: league_name,
-                                self.elements['consts']['selected_row_field']: selected_row
-                            }
-                            self.logger.debug(
-                                f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
+                        if not game_data[self.elements['consts']['first_total_score']]:
+                            selected_row = self.find_selected_total_row(
+                                game_data[self.elements['consts']['first_total_score']])
+                            if selected_row:
+                                # Mark the game for betting
+                                self.marked_games[game_key] = {
+                                    self.elements['consts']['league_name_field']: league_name,
+                                    self.elements['consts']['selected_row_field']: selected_row
+                                }
+                                self.logger.debug(
+                                    f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
         except Exception as e:
             self.logger.warning(f"Error selecting total row for betting: {e}")
 
@@ -361,17 +379,21 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.logger.debug(f'Cleaning up inactive games...')
         try:
             for league_name in list(self.basketballLeagues.keys()):
-                for game_key in list(self.basketballLeagues[league_name].keys()):
+
+                games_list = []
+                if league_name in self.basketballLeagues:
+                    games_list = list(self.basketballLeagues[league_name].keys())
+                for game_key in games_list:
                     if game_key not in active_games[league_name]:
                         self.logger.info(f'Cleaning up inactive game: {game_key}')
                         del self.basketballLeagues[league_name][game_key]
 
                 # Remove leagues that no longer have active games
-                if league_name not in active_games or not self.basketballLeagues[league_name]:
+                if league_name not in active_games or not league_name in self.basketballLeagues:
                     self.logger.info(f'Cleaning up empty league: {league_name}')
                     del self.basketballLeagues[league_name]
         except Exception as e:
-            self.logger.error(f"Error cleaning up inactive games: {str(e)}")
+            self.logger.error(f"Error cleaning up inactive games: {e}")
 
     def find_first_total_in_table(self, game_key):
         """Finds the first row in the total table."""
@@ -408,54 +430,106 @@ class PlayManager(QObject):  # Inherit QObject for threading
                     }
             return None
         except Exception as e:
-            self.logger.warning(f"Error finding first total in table for game {game_key}: {e}")
+            self.logger.warning(f"Error finding first total in table for game {game_key}")
             return None
 
-    def find_total_table(self, game_first_total_score):
+    def find_selected_total_row(self, game_first_total_score):
         """Finds a suitable row in the total table based on the first total score of the game."""
         self.logger.debug('Finding total table based on first total score')
+        table_index = -1
+        rows_count = -1
+        curr_row_index = 0
+        obj_values = []
+        under_values = []
         try:
             tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
 
-            for table in tables:
-                header = table.find_element(By.CLASS_NAME, self.elements['consts']['table_header_class'])
-                header_text = header.find_element(By.CLASS_NAME,
-                                                  self.elements['consts']['table_header_text_class']).text
+            if table_index == -1:
+                # get the table and store its index .
+                for index, table in enumerate(tables):
+                    header = table.find_element(By.CLASS_NAME, self.elements['consts']['table_header_class'])
+                    header_text = header.find_element(By.CLASS_NAME,
+                                                      self.elements['consts']['table_header_text_class']).text
+                    if header_text == self.elements['consts']['table_text_value']:
+                        table_index = index
+                        if self.elements['consts']['show_text_value'] not in table.get_attribute('class'):
+                            table.click()
+                        rows = tables[table_index].find_elements(By.CLASS_NAME,
+                                                                 self.elements['consts']['table_rows_class'])
+                        rows_count = len(rows)
+                        break
+            # Iterate the table rows and fill the data lists.
+            while curr_row_index < rows_count:
+                # refresh the tables data and extract the row data.
+                try:
+                    res = self.extract_suitable_rows(table_index, curr_row_index, game_first_total_score)
+                    if res:
+                        if res == -1:
+                            # out of index
+                            break
+                        if res != 0:
+                            under = res[self.elements['consts']['under_text_value']]
+                            under_values.append(under)
+                            obj_values.append(res)
+                        curr_row_index += 1
+                except StaleElementReferenceException:
+                    print(f"StaleElementReferenceException: Retrying row {curr_row_index} in the table")
+            # Extract min value
+            min_index = 0
+            if len(under_values) == 0:
+                return None
+            min_value = under_values[0]
+            for index, val in enumerate(under_values):
+                if val < min_value:
+                    min_index = index
+                    min_value = val
 
-                if header_text == self.elements['consts']['table_text_value']:
-                    if self.elements['consts']['show_text_value'] not in table.get_attribute('class'):
-                        table.click()
-
-                    suitable_rows = self.extract_suitable_rows(table, game_first_total_score)
-
-                    if suitable_rows:
-                        return min(suitable_rows, key=lambda x: x[self.elements['consts']['under_text_value']])
-            return None
+            if min_index == -1:
+                return None
+            return obj_values[min_index]
         except Exception as e:
             self.logger.warning(f"Error finding total table: {e}")
             return None
 
-    def extract_suitable_rows(self, total_table, game_first_total_score):
-        """Extracts rows that meet the betting criteria."""
-        suitable_rows = []
+    def extract_suitable_rows(self, table_index, curr_row_index, game_first_total_score):
+        """"
+         :param table_index:  the total table index in the page tables list.
+         :param curr_row_index: the current row needed to be extracted. needed in case of exception.
+         :param game_first_total_score: the first total score value for the predicate.
+         :return: -1 in case of rows list changed and needed to be continue.
+                 0 in case the row doesn't accept the predicate.
+                 [total, under, over] in case the row accepts the predicate.
+                 None in case exception occurred and retry needed here.
+         """
         try:
-            rows = total_table.find_elements(By.CLASS_NAME, self.elements['consts']['table_rows_class'])
-
-            for row in rows:
-                expected_total_score = float(
-                    row.find_element(By.CLASS_NAME, self.elements['consts']['table_row_total_score_class']).text)
-                over_value = float(
-                    row.find_elements(By.CLASS_NAME, self.elements['consts']['table_row_over_score_class'])[0].text)
-                under_value = float(
-                    row.find_elements(By.CLASS_NAME, self.elements['consts']['table_row_under_score_class'])[1].text)
-
-                if expected_total_score >= game_first_total_score + self.point_difference and under_value >= 1.8:
-                    suitable_rows.append({
-                        self.elements['consts']['total_text_value']: expected_total_score,
-                        self.elements['consts']['over_text_value']: over_value,
-                        self.elements['consts']['under_text_value']: under_value
-                    })
-            return suitable_rows
-        except Exception as e:
-            self.logger.warning(f"Error extracting suitable rows from total table: {e}")
-            return suitable_rows
+            tables = self.driver.find_elements(By.CLASS_NAME, self.elements['consts']['total_table_class'])
+            rows = tables[table_index].find_elements(By.CLASS_NAME, self.elements['consts']['table_rows_class'])
+            if len(rows) <= curr_row_index:
+                return -1
+            row = rows[curr_row_index]
+            expected_total_score = float(
+                row.find_element(By.CLASS_NAME, self.elements['consts']['table_row_total_score_class']).text)
+            over_value = float(
+                row.find_elements(By.CLASS_NAME, self.elements['consts']['table_row_over_score_class'])[0].text)
+            under_value = float(
+                row.find_elements(By.CLASS_NAME, self.elements['consts']['table_row_under_score_class'])[1].text)
+            if ((game_first_total_score is not None and game_first_total_score >= 0)
+                    and (self.point_difference is not None)
+                    and (expected_total_score is not None and expected_total_score >= 0)
+                    and (under_value is not None and under_value >= 0)
+                    and self.elements['consts']['min_under_value']
+                    and self.elements['consts']['total_text_value']
+                    and self.elements['consts']['under_text_value']
+                    and self.elements['consts']['over_text_value']
+                    and under_value >= self.elements['consts']['min_under_value']
+                    and expected_total_score - self.point_difference >= game_first_total_score):
+                return {
+                    self.elements['consts']['total_text_value']: expected_total_score,
+                    self.elements['consts']['over_text_value']: over_value,
+                    self.elements['consts']['under_text_value']: under_value,
+                    self.elements['consts']['curr_row_index']: curr_row_index
+                }
+            else:
+                return 0
+        except Exception as err:
+            return None

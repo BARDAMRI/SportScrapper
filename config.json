@@ -4,8 +4,9 @@
   "basketball": "https://www.bet365box.com/sportsbook/live/basketball",
   "username": "Pro16",
   "password": "aa12341234",
-  "point_difference": 0,
-  "time_between_refreshes_in_sec": 5,
+  "point_difference": 12,
+  "time_between_refreshes_in_sec": 3,
+  "max_retry_number": 3,
   "DB": {
     "connection_string": "mongodb+srv://{username}:{password}@sportcluster.3zn92.mongodb.net/?retryWrites=true&w=majority&appName={cluster}",
     "db_username": "bardamri1702",
@@ -59,47 +60,6 @@
         "description": "Link to each game in the league within the basketball main page."
       }
     },
-    "gameMainPage": {
-      "teamNames": {
-        "firstTeam": {
-          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[2]/div/p[1]",
-          "className": "ed51694 e4438f9",
-          "description": "Element for the first team's name."
-        },
-        "secondTeam": {
-          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[2]/div/p[2]",
-          "className": "e333ea9 e4438f9",
-          "description": "Element for the second team's name."
-        }
-      },
-      "scores": {
-        "firstTeamScore": {
-          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[3]/p[1]",
-          "className": "d12a5bc acd500f",
-          "description": "Element for the first team's score."
-        },
-        "secondTeamScore": {
-          "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[3]/p[2]",
-          "className": "d12a5bc acd500f",
-          "description": "Element for the second team's score."
-        }
-      },
-      "totalScore": {
-        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[2]/div[1]/div[2]/div[3]/div[2]/div/div/div[2]/div[1]/p",
-        "className": "f4f439a",
-        "description": "Element displaying the total score of the game."
-      },
-      "quarterTimeLeft": {
-        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[1]/p[1]",
-        "className": "e5892ca cc19a74",
-        "description": "Element displaying the time left in the current quarter."
-      },
-      "quarterNumber": {
-        "xPath": "/html/body/div[1]/div[3]/div[2]/div/div[1]/div[2]/div[1]/div[3]/div[2]/div/div/div[1]/div[2]/div/div/a/div[1]/div[1]/p[2]",
-        "className": "c669e6b cc19a74",
-        "description": "Element displaying the current quarter number."
-      }
-    },
     "consts": {
       "live_events_suffix": "/sportsbook/live/events",
       "first_total_score": "first_total_score",
@@ -144,6 +104,9 @@
       "under_text_value": "Under",
       "over_text_value": "Over",
       "total_text_value": "Total",
+      "curr_row_index": "Row Index",
+      "league_name": "League Name",
+      "selected_row": "Selected Row",
       "ATS": "ATS",
       "B": "B",
       "1Q": "1Q",
@@ -151,7 +114,8 @@
       "3Q": "3Q",
       "4Q": "4Q",
       "10:00": "10:00",
-      "09:59": "09:59"
+      "09:59": "09:59",
+      "min_under_value": 1.8
     }
   }
 }

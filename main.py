@@ -121,7 +121,7 @@ def start_scrapping():
     thread = QThread()
 
     # Create the PlayManager instance
-    manager = PlayManager(logger=logger, elements=config['elements'], point_difference=config['point_difference'],
+    manager = PlayManager(logger=logger, max_try_count=config['max_retry_number'], elements=config['elements'], point_difference=config['point_difference'],
                           refreshTime=config['time_between_refreshes_in_sec'], game_window=game_window)
     manager.data_updated.connect(game_window.update_game_data)
     # Move the PlayManager instance to the QThread
@@ -176,82 +176,86 @@ def on_closing():
 def open_welcome_window():
     global header, welcome_message, start_button, language, translations, window, language_button
 
-    app = QApplication(sys.argv)
+    try:
+        app = QApplication(sys.argv)
 
-    # Create the main window
-    window = QWidget()
-    window.setWindowTitle("Sport Scrapper")
-    window.setFixedSize(800, 600)
+        # Create the main window
+        window = QWidget()
+        window.setWindowTitle("Sport Scrapper")
+        window.setFixedSize(800, 600)
 
-    # Load and set the background image
-    bg_label = QLabel(window)
-    bg_pixmap = QPixmap("/Users/bardamri/PycharmProjects/SportScrapper/entrancePageImage.png")
-    bg_label.setPixmap(bg_pixmap)
-    bg_label.setScaledContents(True)
-    bg_label.resize(window.size())
+        # Load and set the background image
+        bg_label = QLabel(window)
+        bg_pixmap = QPixmap("/Users/bardamri/PycharmProjects/SportScrapper/entrancePageImage.png")
+        bg_label.setPixmap(bg_pixmap)
+        bg_label.setScaledContents(True)
+        bg_label.resize(window.size())
 
-    # Top layout for headers
-    top_layout = QVBoxLayout()
-    top_layout.setAlignment(Qt.AlignTop)
-    top_layout.setContentsMargins(0, 20, 0, 0)  # Adjust margins to top
+        # Top layout for headers
+        top_layout = QVBoxLayout()
+        top_layout.setAlignment(Qt.AlignTop)
+        top_layout.setContentsMargins(0, 20, 0, 0)  # Adjust margins to top
 
-    # Header label
-    header = QLabel(translations[language]["project_name"])
-    header.setStyleSheet("font-size: 36px; font-weight: bold; color: white;")
-    header.setAlignment(Qt.AlignCenter)
-    top_layout.addWidget(header)
+        # Header label
+        header = QLabel(translations[language]["project_name"])
+        header.setStyleSheet("font-size: 36px; font-weight: bold; color: white;")
+        header.setAlignment(Qt.AlignCenter)
+        top_layout.addWidget(header)
 
-    # Welcome message
-    welcome_message = QLabel(translations[language]["welcome"])
-    welcome_message.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
-    welcome_message.setAlignment(Qt.AlignCenter)
-    top_layout.addWidget(welcome_message)
+        # Welcome message
+        welcome_message = QLabel(translations[language]["welcome"])
+        welcome_message.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        welcome_message.setAlignment(Qt.AlignCenter)
+        top_layout.addWidget(welcome_message)
 
-    # Overlay layout for central content
-    central_layout = QVBoxLayout()
-    central_layout.setAlignment(Qt.AlignCenter)
-    central_layout.setContentsMargins(0, 150, 0, 50)  # Adjust margins to center the content
+        # Overlay layout for central content
+        central_layout = QVBoxLayout()
+        central_layout.setAlignment(Qt.AlignCenter)
+        central_layout.setContentsMargins(0, 150, 0, 50)  # Adjust margins to center the content
 
-    # Start Analyze button
-    start_button = QPushButton(translations[language]["start_analyze"])
-    start_button.setStyleSheet("""
-        font-size: 22px;
-        font-weight: 900;
-        background-color: white;
-        padding: 10px 20px;
-        border-radius: 15px;
-        """)
-    start_button.clicked.connect(start_application)
-    central_layout.addWidget(start_button)
+        # Start Analyze button
+        start_button = QPushButton(translations[language]["start_analyze"])
+        start_button.setStyleSheet("""
+            font-size: 22px;
+            font-weight: 900;
+            background-color: white;
+            padding: 10px 20px;
+            border-radius: 15px;
+            """)
+        start_button.clicked.connect(start_application)
+        central_layout.addWidget(start_button)
 
-    # Create a container widget for top content
-    top_widget = QWidget(window)
-    top_widget.setLayout(top_layout)
-    top_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
-    top_widget.resize(window.size())
-    top_widget.move(0, 0)
+        # Create a container widget for top content
+        top_widget = QWidget(window)
+        top_widget.setLayout(top_layout)
+        top_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
+        top_widget.resize(window.size())
+        top_widget.move(0, 0)
 
-    # Create a container widget for central content
-    central_widget = QWidget(window)
-    central_widget.setLayout(central_layout)
-    central_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
-    central_widget.resize(window.size())
-    central_widget.move(0, 0)
+        # Create a container widget for central content
+        central_widget = QWidget(window)
+        central_widget.setLayout(central_layout)
+        central_widget.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
+        central_widget.resize(window.size())
+        central_widget.move(0, 0)
 
-    # Language button (flags as text)
-    language_button = QPushButton("🇺🇸" if language == 'he' else "🇮🇱", window)
-    language_button.setStyleSheet("font-size: 18px; background-color: transparent; color: white;")
-    language_button.clicked.connect(select_language)
-    language_button.resize(100, 40)
-    language_button.move(window.width() - 110, 10)
+        # Language button (flags as text)
+        language_button = QPushButton("🇺🇸" if language == 'he' else "🇮🇱", window)
+        language_button.setStyleSheet("font-size: 18px; background-color: transparent; color: white;")
+        language_button.clicked.connect(select_language)
+        language_button.resize(100, 40)
+        language_button.move(window.width() - 110, 10)
 
-    # Handle window close event
-    app.aboutToQuit.connect(on_closing)
+        # Handle window close event
+        app.aboutToQuit.connect(on_closing)
 
-    # Show the window
-    window.show()
+        # Show the window
+        window.show()
 
-    sys.exit(app.exec_())
+        sys.exit(app.exec_())
+
+    except Exception as e:
+        logger.error(f'Error on UI window open in open_welcome_window. Error : ${str(e)}')
 
 
 def start_application():
