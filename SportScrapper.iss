@@ -4,7 +4,6 @@ AppVersion=1.0
 DefaultDirName={pf}\SportScrapper
 DefaultGroupName=SportScrapper
 OutputBaseFilename=SportScrapperSetup
-DefaultDirFlags=uninsalwaysuninstall
 
 [Files]
 ; Copy the executable
