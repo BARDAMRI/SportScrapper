@@ -6,12 +6,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/config.json', 'assets/config.json'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/translations.json', 'assets/translations.json'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/entrancePageImage.png', 'assets/entrancePageImage.png'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/icon.png', 'assets/icon.png'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/icon.ico', 'assets/icon.ico'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/requirements.txt', 'assets/requirements.txt')
+        ('assets/config.json', 'assets'),
+        ('assets/translations.json', 'assets'),
+        ('assets/entrancePageImage.png', 'assets'),
+        ('assets/icon.png', 'assets'),
+        ('assets/icon.ico', 'assets')
     ],
     hiddenimports=[],
     hookspath=[],
@@ -42,11 +41,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets/icon.ico'],
-)
-app = BUNDLE(
-    exe,
-    name='SportScrapper.app',
     icon='assets/icon.ico',
-    bundle_identifier=None,
 )
