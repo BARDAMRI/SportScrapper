@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Use a Windows runner
 
     steps:
       # Step 1: Checkout code from GitHub repository
@@ -30,41 +30,32 @@ jobs:
       # Step 4: Build executable using PyInstaller
       - name: Build executable
         run: |
-          pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets:assets" --add-data "logs:logs" src/main.py
+          pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets;assets" --add-data "logs;logs" src/main.py
 
-      # Step 5: Install Inno Setup Compiler (for creating installer)
-      - name: Install Inno Setup
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y innosetup
-
-      # Step 6: Create the installer using Inno Setup
+      # Step 5: Install Inno Setup (pre-installed on Windows runner)
       - name: Create installer
         run: |
-          innosetup-compiler /path/to/your/installer.iss
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" path\to\your\installer.iss
 
-      # Step 7: Create a new Git tag if it does not already exist
+      # Step 6: Create a new Git tag (versioning)
       - name: Create a new tag
         id: tag
         run: |
-          git fetch --tags
-          if [ -z "$(git tag -l v1.0.${{ github.run_number }})" ]; then
-            git tag v1.0.${{ github.run_number }}
-            git push origin v1.0.${{ github.run_number }}
-          fi
+          git tag v1.0.${{ github.run_number }}
+          git push origin v1.0.${{ github.run_number }}
 
-      # Step 8: Upload the installer to the release
+      # Step 7: Upload the installer to the release
       - name: Upload installer artifact
         uses: actions/upload-artifact@v3
         with:
           name: SportScrapper-installer
-          path: path/to/your/installer/output/SportScrapperSetup.exe  # Update with your actual path
+          path: path\to\your\installer\output\SportScrapperSetup.exe
 
-      # Step 9: Create a new release on GitHub and upload the installer
+      # Step 8: Create a new release on GitHub
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.${{ github.run_number }}
-          files: path/to/your/installer/output/SportScrapperSetup.exe  # Ensure the .exe installer is uploaded
+          files: path\to\your\installer\output\SportScrapperSetup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.SS_TOKEN }}
