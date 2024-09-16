@@ -9,10 +9,12 @@ a = Analysis(
         ('assets/config.json', 'assets'),
         ('assets/translations.json', 'assets'),
         ('assets/entrancePageImage.png', 'assets'),
+        ('assets/requirements.txt', 'assets'),
         ('assets/icon.png', 'assets'),
-        ('assets/icon.ico', 'assets')
+        ('assets/icon.ico', 'assets'),
+
     ],
-    hiddenimports=[],
+    hiddenimports=['requests'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
