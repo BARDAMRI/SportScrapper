@@ -22,7 +22,7 @@ translations = {}
 
 
 def init_configurations():
-    global config, translations, config_path
+    global config, translations, config_path, game_window
     try:
         print(f'loading config file on path {config_path}')
         with open(config_path, 'r') as file:
@@ -85,7 +85,7 @@ def initialize_logger(log_level=logging.INFO,
 
 
 def initDB():
-    global cluster_name, collection_name, client, db, collection, logger
+    global cluster_name, collection_name, client, db, collection, logger, game_window
     cluster_name = config['DB']['cluster_name']
     db_name = config['DB']['db_name']
     username = config['DB']['db_username']
@@ -182,6 +182,7 @@ def select_language():
 
 
 def update_ui_language():
+    global game_window, language, translations, language_button, start_button, welcome_message, header
     header.setText(translations[language]["project_name"])
     welcome_message.setText(translations[language]["welcome"])
     start_button.setText(translations[language]["start_analyze"])
@@ -286,7 +287,7 @@ def open_welcome_window():
 
 def start_application():
     try:
-        global game_window
+        global game_window, logger, config, translations, language
         # Create and display the game window immediately after access verification
         game_window = GameWindow(logger=logger, elements=config['elements'], translation=translations[language])
         game_window.show()
@@ -318,11 +319,10 @@ def open_ui():
 
 
 if __name__ == '__main__':
-    global cluster_name, collection_name, client, db, collection, config, thread, manager, logger
+    global cluster_name, collection_name, client, db, collection, config, thread, manager, logger, game_window
     try:
         try:
             init_configurations()
-            print(f'Configuration loaded : ${config}')
             initialize_logger()
             if logger:
                 logger.info('Configurations file and translation were loaded successfully!')
