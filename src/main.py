@@ -20,16 +20,16 @@ language_button = '🇮🇱'
 translations = {}
 
 
-def initialize_logger(log_file_name=os.path.join(os.getcwd(), 'logs', 'SportScrapperLogs.log'), log_level=logging.INFO,
+def initialize_logger(log_level=logging.INFO,
                       max_file_size=5 * 1024 * 1024,
                       backup_count=5):
     global logger
+    log_dir = os.path.join(os.path.dirname(__file__), "logs")
 
-    log_dir = os.path.join(os.getcwd(), 'logs')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    log_file_path = os.path.join(log_dir, log_file_name)
+    log_file_path = os.path.join(log_dir, config["logger_file_name"])
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
@@ -55,27 +55,27 @@ def init_configurations():
     try:
         with open(config_path, 'r') as file:
             config = json.load(file)
-            logger.info("Configurations loaded successfully:", config)
+            print("Configurations loaded successfully:", config)
             try:
                 translations_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
                 with open(translations_path, 'r') as f:
                     translations = json.load(f)
             except FileNotFoundError as e:
-                logger.error(f"Error: translations.json file not found: {str(e)}")
+                print(f"Error: translations.json file not found: {str(e)}")
                 if game_window:
                     game_window.close_windows()
                 sys.exit(1)
             except json.JSONDecodeError as e:
-                logger.error(f"Error: Invalid JSON in translations.json: {str(e)}")
+                print(f"Error: Invalid JSON in translations.json: {str(e)}")
                 if game_window:
                     game_window.close_windows()
                 sys.exit(1)
     except FileNotFoundError:
-        logger.info(f"Error: The translation file '{translations_path}' was not found.")
+        print(f"Error: The configurations file '{translations_path}' was not found.")
     except json.JSONDecodeError:
-        logger.info(f"Error: The translation file '{translations_path}' contains invalid JSON.")
+        print(f"Error: The configurations file '{translations_path}' contains invalid JSON.")
     except Exception as e:
-        logger.info(f"An unexpected error occurred during translation file loading: {e}")
+        print(f"An unexpected error occurred during configurations file loading: {e}")
 
 
 def initDB():
@@ -305,8 +305,9 @@ if __name__ == '__main__':
     global cluster_name, collection_name, client, db, collection, config, thread, manager
     try:
         try:
-            initialize_logger()
             init_configurations()
+            initialize_logger()
+            logger.info('Configurations file and translation were loaded successfully!')
             initDB()
         except Exception as e:
             if logger:
