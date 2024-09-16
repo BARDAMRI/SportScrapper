@@ -35,7 +35,7 @@ jobs:
       # Step 5: Install Inno Setup (pre-installed on Windows runner) and create installer
       - name: Create installer
         run: |
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SportScrapper.iss /Orelease/installer
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" SportScrapper.iss /release/installer
 
       # Step 6: Create a new Git tag (versioning)
       - name: Create a new tag
