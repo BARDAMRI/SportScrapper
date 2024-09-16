@@ -10,8 +10,7 @@ a = Analysis(
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/translations.json', 'assets/translations.json'),
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/entrancePageImage.png', 'assets/entrancePageImage.png'),
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/icon.png', 'assets/icon.png'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/requirements.txt', 'assets/requirements.txt'),
-        ('/Users/bardamri/PycharmProjects/SportScrapper/logs', 'logs')
+        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/requirements.txt', 'assets/requirements.txt')
     ],
     hiddenimports=[],
     hookspath=[],
