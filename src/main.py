@@ -30,7 +30,11 @@ def initialize_logger(log_level=logging.INFO,
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    log_file_path = os.path.join(log_dir, config["logger_file_name"])
+    if config:
+        name = config["logger_file_name"]
+    else:
+        name = 'SportScrapperLogs.log'
+    log_file_path = os.path.join(log_dir, name)
     print(f'Loading log file on dir : {log_file_path}')
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
@@ -117,7 +121,6 @@ def verify_access():
     except Exception as e:
         logger.error(f"Error during access verification: {e}")
         return False
-
 
 
 def start_scrapping():
@@ -306,7 +309,8 @@ if __name__ == '__main__':
         try:
             init_configurations()
             initialize_logger()
-            logger.info('Configurations file and translation were loaded successfully!')
+            if logger:
+                logger.info('Configurations file and translation were loaded successfully!')
             initDB()
         except Exception as e:
             if logger:
