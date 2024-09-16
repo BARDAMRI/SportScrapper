@@ -36,7 +36,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
         # Make the window fullscreen and headless
         chrome_options = Options()
-        # chrome_options.add_argument("--headless")  # This makes the browser invisible
+        chrome_options.add_argument("--headless")  # This makes the browser invisible
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
