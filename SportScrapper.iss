@@ -4,18 +4,25 @@ AppVersion=1.0
 DefaultDirName={pf}\SportScrapper
 DefaultGroupName=SportScrapper
 OutputBaseFilename=SportScrapperSetup
+DefaultDirFlags=uninsalwaysuninstall
 
 [Files]
+; Copy the executable
 Source: "dist\SportScrapper.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; Copy necessary assets
 Source: "assets\config.json"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\translations.json"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\entrancePageImage.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\icon.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "logs\*"; DestDir: "{app}\logs"; Flags: createallsubdirs
-; Note: An empty logs folder will be created, but no files are copied inside it.
+
+; Ensure the logs folder is created, but don't add files (empty folder)
+Source: "logs\*"; DestDir: "{app}\logs"; Flags: createallsubdirs recursesubdirs
 
 [Icons]
-Name: "{group}\SportScrapper"; Filename: "{app}\SportScrapper.exe"
+; Create a desktop icon
+Name: "{group}\SportScrapper"; Filename: "{app}\SportScrapper.exe"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\SportScrapper.exe"; Description: "{cm:LaunchProgram, SportScrapper}"
+; Launch the program after installation
+Filename: "{app}\SportScrapper.exe"; Description: "{cm:LaunchProgram, SportScrapper}"; Flags: nowait postinstall skipifsilent
