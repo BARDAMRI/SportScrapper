@@ -115,10 +115,6 @@ def verify_access():
         return False
 
 
-def copyPages():
-    copy = Coppier(config['url'], config['basketball'], config['username'], config['password'])
-    copy.save_webpage()
-
 
 def start_scrapping():
     global game_window, manager, thread
