@@ -24,7 +24,7 @@ translations = {}
 def initialize_logger(log_level=logging.INFO,
                       max_file_size=5 * 1024 * 1024,
                       backup_count=5):
-    global logger
+    global logger, config
     log_dir = os.path.join(os.getcwd(), "logs")
 
     if not os.path.exists(log_dir):
