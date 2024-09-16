@@ -22,9 +22,9 @@ translations = {}
 
 
 def init_configurations():
-    global config, translations
+    global config, translations, config_path
     try:
-        print(f'loading config file on path {config}')
+        print(f'loading config file on path {config_path}')
         with open(config_path, 'r') as file:
             config = json.load(file)
             print("Configurations loaded successfully:", config)
@@ -322,6 +322,7 @@ if __name__ == '__main__':
     try:
         try:
             init_configurations()
+            print(f'Configuration loaded : ${config}')
             initialize_logger()
             if logger:
                 logger.info('Configurations file and translation were loaded successfully!')
