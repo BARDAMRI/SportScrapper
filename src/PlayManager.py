@@ -1,6 +1,4 @@
-import sys
 import time
-
 from PyQt5.QtCore import QObject, pyqtSignal
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options

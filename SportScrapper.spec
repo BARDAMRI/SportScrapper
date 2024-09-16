@@ -2,7 +2,7 @@
 
 a = Analysis(
     ['src/main.py'],
-    pathex=['src'],
+    pathex=[],
     binaries=[],
    datas=[
     ('assets/config.json', 'assets'),
@@ -14,7 +14,7 @@ a = Analysis(
     hiddenimports=[
         'game_window',
         'play_manager',
-         'altgraph',
+        'altgraph',
         'appnope',
         'asttokens',
         'attrs',

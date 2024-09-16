@@ -9,7 +9,7 @@ from pymongo import MongoClient
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread
-from src.GameWindow import GameWindow
+from GameWindow import GameWindow
 
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
 global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
