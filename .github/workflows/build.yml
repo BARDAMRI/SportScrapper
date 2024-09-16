@@ -35,7 +35,7 @@ jobs:
       # Step 5: Install Inno Setup (pre-installed on Windows runner)
       - name: Create installer
         run: |
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /Users/bardamri/PycharmProjects/SportScrapper/.iss
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .iss
 
       # Step 6: Create a new Git tag (versioning)
       - name: Create a new tag
@@ -49,13 +49,13 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: SportScrapper-installer
-          path: path\to\your\installer\output\SportScrapperSetup.exe
+          path: release\installer\SportScrapperSetup.exe
 
       # Step 8: Create a new release on GitHub
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.${{ github.run_number }}
-          files: path\to\your\installer\output\SportScrapperSetup.exe
+          files: release\installer\SportScrapperSetup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.SS_TOKEN }}
