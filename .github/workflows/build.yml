@@ -30,7 +30,7 @@ jobs:
       # Step 4: Build executable using PyInstaller with necessary flags
       - name: Build executable
         run: |
-          pyinstaller --clean --noconfirm --onefile --windowed --icon=assets/icon.ico SportScrapper.spec
+          pyinstaller --clean SportScrapper.spec
 
       # Step 5: Create release directory for Inno Setup installer
       - name: Create release directory

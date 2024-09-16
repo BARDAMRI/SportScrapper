@@ -12,6 +12,9 @@ from PyQt5.QtCore import Qt, QThread
 from GameWindow import GameWindow
 
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
+
+print(f'os.cwd : {os.getcwd()}')
+print(f'curr __file__ path : {os.path.dirname(__file__)}')
 global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
 
 language = 'he'
@@ -29,6 +32,7 @@ def initialize_logger(log_level=logging.INFO,
         os.makedirs(log_dir)
 
     log_file_path = os.path.join(log_dir, config["logger_file_name"])
+    print(f'Loading log file on dir : {log_file_path}')
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
@@ -52,6 +56,7 @@ def initialize_logger(log_level=logging.INFO,
 def init_configurations():
     global config, translations
     try:
+        print(f'loading config file on path {config}')
         with open(config_path, 'r') as file:
             config = json.load(file)
             print("Configurations loaded successfully:", config)
