@@ -301,7 +301,7 @@ def open_ui():
 
 
 if __name__ == '__main__':
-    global cluster_name, collection_name, client, db, collection, config, thread, manager
+    global cluster_name, collection_name, client, db, collection, config, thread, manager, logger
     try:
         try:
             init_configurations()
