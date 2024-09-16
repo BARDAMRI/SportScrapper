@@ -14,7 +14,6 @@ from GameWindow import GameWindow
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
 
 print(f'os.cwd : {os.getcwd()}')
-print(f'curr __file__ path : {os.path.dirname(__file__)}')
 global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
 
 language = 'he'
@@ -26,7 +25,7 @@ def initialize_logger(log_level=logging.INFO,
                       max_file_size=5 * 1024 * 1024,
                       backup_count=5):
     global logger
-    log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    log_dir = os.path.join(os.getcwd(), "logs")
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
