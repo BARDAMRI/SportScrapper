@@ -21,41 +21,6 @@ language_button = '🇮🇱'
 translations = {}
 
 
-def initialize_logger(log_level=logging.INFO,
-                      max_file_size=5 * 1024 * 1024,
-                      backup_count=5):
-    global logger, config
-    log_dir = os.path.join(os.getcwd(), "logs")
-
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    if config:
-        name = config["logger_file_name"]
-    else:
-        name = 'SportScrapperLogs.log'
-    log_file_path = os.path.join(log_dir, name)
-    print(f'Loading log file on dir : {log_file_path}')
-    logger = logging.getLogger(__name__)
-    logger.setLevel(log_level)
-
-    # Check if the logger already has handlers (to avoid duplicate logging)
-    if not logger.handlers:
-        console_handler = logging.StreamHandler()
-        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size, backupCount=backup_count)
-        console_handler.setLevel(log_level)
-        file_handler.setLevel(log_level)
-
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        file_handler.setFormatter(formatter)
-
-        logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
-
-    return logger
-
-
 def init_configurations():
     global config, translations
     try:
@@ -85,8 +50,42 @@ def init_configurations():
         print(f"An unexpected error occurred during configurations file loading: {e}")
 
 
+def initialize_logger(log_level=logging.INFO,
+                      max_file_size=5 * 1024 * 1024,
+                      backup_count=5):
+    global logger, config
+    print(f'in init logger. Config is ${config}')
+    log_dir = os.path.join(os.getcwd(), "logs")
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    if config:
+        name = config["logger_file_name"]
+    else:
+        name = 'SportScrapperLogs.log'
+    log_file_path = os.path.join(log_dir, name)
+    print(f'Loading log file on dir : {log_file_path}')
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+
+    # Check if the logger already has handlers (to avoid duplicate logging)
+    if not logger.handlers:
+        console_handler = logging.StreamHandler()
+        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size, backupCount=backup_count)
+        console_handler.setLevel(log_level)
+        file_handler.setLevel(log_level)
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
+
+        logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
+
+
 def initDB():
-    global cluster_name, collection_name, client, db, collection
+    global cluster_name, collection_name, client, db, collection, logger
     cluster_name = config['DB']['cluster_name']
     db_name = config['DB']['db_name']
     username = config['DB']['db_username']
@@ -97,9 +96,15 @@ def initDB():
     client = MongoClient(connection_string, tlsCAFile=certifi.where())
     try:
         client.admin.command('ping')
-        logger.info('Connection to db succeeded.')
+        if logger:
+            logger.info('Connection to db succeeded.')
+        else:
+            print('Connection to db succeeded.')
     except Exception as e:
-        logger.warning(f'Connection to db failed: {e}')
+        if logger:
+            logger.warning(f'Connection to db failed: {e}')
+        else:
+            print(f'Connection to db failed: {e}')
         if game_window:
             game_window.close_windows()
         sys.exit(1)
@@ -108,18 +113,27 @@ def initDB():
 
 
 def verify_access():
-    global collection
+    global collection, logger
     try:
         # Fetch the access control document
         access_document = collection.find_one()
         if access_document and access_document.get('access_allowed', False):
-            logger.info('Access granted to program. Launching the application...')
+            if logger:
+                logger.info('Access granted to program. Launching the application...')
+            else:
+                print('Access granted to program. Launching the application...')
             return True
         else:
-            logger.warning("Access denied. Exiting the program.")
+            if logger:
+                logger.warning("Access denied. Exiting the program.")
+            else:
+                print("Access denied. Exiting the program.")
             return False
     except Exception as e:
-        logger.error(f"Error during access verification: {e}")
+        if logger:
+            logger.error(f"Error during access verification: {e}")
+        else:
+            print("Access denied. Exiting the program.")
         return False
 
 
@@ -311,10 +325,14 @@ if __name__ == '__main__':
             initialize_logger()
             if logger:
                 logger.info('Configurations file and translation were loaded successfully!')
+            else:
+                print('Configurations file and translation were loaded successfully! But logger wasn\'t found')
             initDB()
         except Exception as e:
             if logger:
                 logger.error(f'Failed to load system resources. Error : ${str(e)}')
+            else:
+                print(f'Failed to load system resources. Error : ${str(e)}')
             if game_window:
                 game_window.close_windows()
             sys.exit(1)
@@ -329,12 +347,16 @@ if __name__ == '__main__':
         except Exception as e:
             if logger:
                 logger.error(f'Received an error during system operation : ${str(e)}')
+            else:
+                print(f'Received an error during system operation : ${str(e)}')
             if game_window:
                 game_window.close_windows()
             sys.exit(1)
     except Exception as e:
         if logger:
             logger.error(f'Failed to start the system. Error : ${str(e)}')
+        else:
+            print(f'Failed to start the system. Error : ${str(e)}')
         if game_window:
             game_window.close_windows()
         sys.exit(1)
