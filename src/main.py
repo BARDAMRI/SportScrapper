@@ -50,38 +50,45 @@ def init_configurations():
         print(f"An unexpected error occurred during configurations file loading: {e}")
 
 
-def initialize_logger(log_level=logging.INFO,
-                      max_file_size=5 * 1024 * 1024,
-                      backup_count=5):
+def initialize_logger(log_level=logging.INFO, max_file_size=5 * 1024 * 1024, backup_count=5):
     global logger, config
-    print(f'in init logger. Config is ${config}')
-    log_dir = os.path.join(os.getcwd(), "logs")
 
+    # Use a user-writable directory for logs
+    if os.name == 'nt':  # For Windows, use AppData
+        log_dir = os.path.join(os.getenv('APPDATA'), 'SportScrapper', 'logs')
+    else:  # For Linux/Mac, use the home directory
+        log_dir = os.path.join(os.getenv('HOME'), 'SportScrapper', 'logs')
+
+    # Create the directory if it doesn't exist
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    if config:
-        name = config["logger_file_name"]
-    else:
-        name = 'SportScrapperLogs.log'
+    # Determine log file name based on config or default to 'SportScrapperLogs.log'
+    name = config.get("logger_file_name", 'SportScrapperLogs.log')
     log_file_path = os.path.join(log_dir, name)
-    print(f'Loading log file on dir : {log_file_path}')
+
+    print(f'Loading log file on dir: {log_file_path}')
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
     # Check if the logger already has handlers (to avoid duplicate logging)
     if not logger.handlers:
-        console_handler = logging.StreamHandler()
-        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size, backupCount=backup_count)
+        console_handler = logging.StreamHandler()  # Logs to console
+        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size,
+                                           backupCount=backup_count)  # Logs to file
         console_handler.setLevel(log_level)
         file_handler.setLevel(log_level)
 
+        # Define the log format
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         console_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
 
+        # Add the handlers to the logger
         logger.addHandler(console_handler)
         logger.addHandler(file_handler)
+
+    return logger
 
 
 def initDB():
