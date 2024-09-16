@@ -21,6 +21,11 @@ class GameWindow(QWidget):
         self.marked_games_data = {}  # To store marked games
         self.selected_league = None  # To track selected league
         self.logger = logger
+
+        # Placeholder labels for "No Data" messages
+        self.no_marked_games_label = QLabel("No marked games available", self)
+        self.no_league_games_label = QLabel("No league games available", self)
+
         self.init_ui()
         self.elements = elements
 
@@ -82,6 +87,12 @@ class GameWindow(QWidget):
 
             central_layout.addWidget(self.marked_games_area, 4)  # 30% of remaining space
 
+            # Add "No Data" label for marked games
+            self.no_marked_games_label.setStyleSheet("font-size: 18px; color: gray;")
+            self.no_marked_games_label.setAlignment(Qt.AlignCenter)
+            central_layout.addWidget(self.no_marked_games_label)
+            self.no_marked_games_label.hide()
+
             # Scrollable area for expanded league games
             league_games_label = QLabel(self.translation["League Games"], self)
             league_games_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
@@ -94,6 +105,12 @@ class GameWindow(QWidget):
             self.league_games_area.setWidget(self.league_games_widget)
 
             central_layout.addWidget(self.league_games_area, 7)  # Remaining 70% for league games
+
+            # Add "No Data" label for league games
+            self.no_league_games_label.setStyleSheet("font-size: 18px; color: gray;")
+            self.no_league_games_label.setAlignment(Qt.AlignCenter)
+            central_layout.addWidget(self.no_league_games_label)
+            self.no_league_games_label.hide()
 
             # Add central layout to content layout
             content_layout.addLayout(central_layout, 7)  # Main content occupies 74% of the screen width
@@ -134,10 +151,11 @@ class GameWindow(QWidget):
 
             # Populate marked games as a table only if a league is selected
             if self.selected_league:
-                game_table = QTableWidget()
-
                 if self.marked_games_data:
-                    # Setting the columns.
+                    self.no_marked_games_label.hide()
+                    game_table = QTableWidget()
+
+                    # Setting the columns
                     columns = [self.translation['Game'], self.translation['League'],
                                self.translation['Current Score'], self.translation['First Guessed Score'],
                                self.translation['Selected Row Number'],
@@ -172,6 +190,10 @@ class GameWindow(QWidget):
 
                     self.marked_games_layout.addWidget(game_table)
 
+                else:
+                    # Show the "No Data" message
+                    self.no_marked_games_label.show()
+
                 # Make sure the layout is set
                 self.marked_games_widget.setLayout(self.marked_games_layout)
         except Exception as e:
@@ -191,44 +213,50 @@ class GameWindow(QWidget):
                     widget_to_remove.setParent(None)
 
             # Populate leagues in the sidebar
-            for league, games in self.leagues_data.items():
-                league_item = QTreeWidgetItem([league])
+            if leagues:
+                self.no_league_games_label.hide()
+                for league, games in self.leagues_data.items():
+                    league_item = QTreeWidgetItem([league])
 
-                # Highlight leagues with marked games
-                if any(game_mark_data[self.elements['consts']['league_name']] == league for (game_key, game_mark_data)
-                       in marked_games.items()):
-                    league_item.setBackground(0, Qt.green)
+                    # Highlight leagues with marked games
+                    if any(game_mark_data[self.elements['consts']['league_name']] == league for (game_key, game_mark_data)
+                           in marked_games.items()):
+                        league_item.setBackground(0, Qt.green)
 
-                self.sidebar.addTopLevelItem(league_item)
+                    self.sidebar.addTopLevelItem(league_item)
 
-            # Display games for the selected league as a table
-            if self.selected_league and self.selected_league in self.leagues_data:
-                games = self.leagues_data[self.selected_league]
-                if games:
-                    game_table = QTableWidget()
+                # Display games for the selected league as a table
+                if self.selected_league and self.selected_league in self.leagues_data:
+                    games = self.leagues_data[self.selected_league]
+                    if games:
+                        game_table = QTableWidget()
 
-                    # Set columns based on the first game's data structure (dynamically set columns based on keys)
-                    first_game = next(iter(games.values()))  # Get first game's data
-                    game_table.setColumnCount(len(first_game.keys()))
-                    columns = first_game.keys()
-                    translated_columns = [self.translation[column] for column in columns]
-                    game_table.setHorizontalHeaderLabels(translated_columns)
+                        # Set columns based on the first game's data structure (dynamically set columns based on keys)
+                        first_game = next(iter(games.values()))  # Get first game's data
+                        game_table.setColumnCount(len(first_game.keys()))
+                        columns = first_game.keys()
+                        translated_columns = [self.translation[column] for column in columns]
+                        game_table.setHorizontalHeaderLabels(translated_columns)
 
-                    # Populate rows with game data
-                    for row_index, (game_key, game_data) in enumerate(games.items()):
-                        game_table.insertRow(row_index)
-                        for col_index, (key, value) in enumerate(game_data.items()):
-                            game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                        # Populate rows with game data
+                        for row_index, (game_key, game_data) in enumerate(games.items()):
+                            game_table.insertRow(row_index)
+                            for col_index, (key, value) in enumerate(game_data.items()):
+                                game_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
 
-                    # Handle marked games data by highlighting rows
-                    for game_key, game_info in marked_games.items():
-                        if game_info[self.elements['consts']['league_name']] == self.selected_league:
-                            for row_index, (key, _) in enumerate(games.items()):
-                                if key == game_key:
-                                    for col_index in range(game_table.columnCount()):
-                                        game_table.item(row_index, col_index).setBackground(Qt.yellow)  # Highlight row
+                        # Handle marked games data by highlighting rows
+                        for game_key, game_info in marked_games.items():
+                            if game_info[self.elements['consts']['league_name']] == self.selected_league:
+                                for row_index, (key, _) in enumerate(games.items()):
+                                    if key == game_key:
+                                        for col_index in range(game_table.columnCount()):
+                                            game_table.item(row_index, col_index).setBackground(Qt.yellow)  # Highlight row
 
-                    self.league_games_layout.addWidget(game_table)
+                        self.league_games_layout.addWidget(game_table)
+
+            else:
+                # Show the "No Data" message
+                self.no_league_games_label.show()
 
             # Set the layout
             self.league_games_widget.setLayout(self.league_games_layout)
