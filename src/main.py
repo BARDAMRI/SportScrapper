@@ -3,7 +3,6 @@ import os
 import logging
 import sys
 import certifi
-from pagesCoppier import Coppier
 from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
