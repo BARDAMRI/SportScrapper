@@ -1,4 +1,5 @@
 import time
+import platform
 from PyQt5.QtCore import QObject, pyqtSignal
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -35,7 +36,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
         # Make the window fullscreen and headless
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # This makes the browser invisible
+        # chrome_options.add_argument("--headless")  # This makes the browser invisible
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -52,17 +53,22 @@ class PlayManager(QObject):  # Inherit QObject for threading
             while not self.driver and attempt_count < self.max_attempts:
                 try:
 
-                    self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                                                   options=chrome_options)
+                    # Initialize the WebDriver
+                    self.driver = webdriver.Chrome(options=chrome_options)
+                    # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
+                    #                                options=chrome_options)
                     self.logger.info("Chrome WebDriver successfully launched.")
-                    return
                 except WebDriverException as e:
                     self.logger.error(
                         f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {self.max_attempts}.")
                     attempt_count += 1
 
-            self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
-            return False
+            if not self.driver:
+                self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
+                return False
+            else:
+                self.logger.info("WebDriver launched successfully.")
+                return True
         except Exception as e:
             self.logger.error(f'Received an error during loading the browser driver in retry_driver.Error: {str(e)}')
 

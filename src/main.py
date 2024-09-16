@@ -2,6 +2,8 @@ import json
 import os
 import logging
 import sys
+import time
+
 import certifi
 from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
@@ -87,8 +89,6 @@ def initialize_logger(log_level=logging.INFO, max_file_size=5 * 1024 * 1024, bac
         # Add the handlers to the logger
         logger.addHandler(console_handler)
         logger.addHandler(file_handler)
-
-    return logger
 
 
 def initDB():
@@ -289,7 +289,9 @@ def open_welcome_window():
         sys.exit(app.exec_())
 
     except Exception as e:
-        logger.error(f'Error on UI window open in open_welcome_window. Error : ${str(e)}')
+        logger.error(f'Error on UI window open in open_welcome_window. Error : {str(e)}')
+        print(f'Error on UI window open in open_welcome_window. Error : {str(e)}')
+        time.sleep(5)
 
 
 def start_application():
