@@ -30,7 +30,7 @@ jobs:
       # Step 4: Build executable using PyInstaller
       - name: Build executable
         run: |
-          pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.png --add-data "assets;assets" --add-data "logs;logs" src/main.py
+          pyinstaller --name SportScrapper --onefile --windowed --icon=assets/icon.ico --add-data "assets;assets" --add-data "logs;logs" src/main.py
 
       # Step 5: Install Inno Setup (pre-installed on Windows runner)
       - name: Create installer

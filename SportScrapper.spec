@@ -10,6 +10,7 @@ a = Analysis(
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/translations.json', 'assets/translations.json'),
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/entrancePageImage.png', 'assets/entrancePageImage.png'),
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/icon.png', 'assets/icon.png'),
+        ('/Users/bardamri/PycharmProjects/SportScrapper/assets/icon.ico', 'assets/icon.ico'),
         ('/Users/bardamri/PycharmProjects/SportScrapper/assets/requirements.txt', 'assets/requirements.txt')
     ],
     hiddenimports=[],
@@ -41,11 +42,11 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets/icon.png'],
+    icon=['assets/icon.ico'],
 )
 app = BUNDLE(
     exe,
     name='SportScrapper.app',
-    icon='assets/icon.png',
+    icon='assets/icon.ico',
     bundle_identifier=None,
 )
