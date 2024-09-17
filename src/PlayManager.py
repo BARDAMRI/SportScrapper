@@ -10,6 +10,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException, NoS
     ElementClickInterceptedException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
+import Service
 
 
 class PlayManager(QObject):  # Inherit QObject for threading
@@ -55,7 +56,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 try:
 
                     # Initialize the WebDriver
-                    self.driver = webdriver.Chrome(options=chrome_options)
+                    self.driver = webdriver.Chrome(Service(ChromeDriverManager().install()), options=chrome_options)
                     # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
                     #                                options=chrome_options)
                     self.logger.info("Chrome WebDriver successfully launched.")
