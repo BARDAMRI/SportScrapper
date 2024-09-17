@@ -71,7 +71,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.logger.info("WebDriver launched successfully.")
                 return True
         except Exception as e:
-            self.logger.error(f'Received an error during loading the browser driver in retry_driver.Error: {str(e)}')
+            self.logger.error(f'Received an error during loading the browser driver in retry_driver.Error: {e}')
 
     def open_live_events_window(self, attempt_count, max_attempts, required_substring):
         while attempt_count < max_attempts:
