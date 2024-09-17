@@ -35,6 +35,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.max_attempts = max_try_count
 
         # Make the window fullscreen and headless
+
         chrome_options = Options()
         chrome_options.add_argument("--headless")  # This makes the browser invisible
         chrome_options.add_argument("--no-sandbox")
