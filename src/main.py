@@ -1,11 +1,11 @@
 import json
-import os
-import logging
-import sys
 import time
 import certifi
 from selenium.common import WebDriverException
-
+import logging
+import os
+import stat
+import sys
 from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
@@ -72,40 +72,87 @@ def init_configurations():
 def initialize_logger(log_level=logging.INFO, max_file_size=5 * 1024 * 1024, backup_count=5):
     global logger, config
 
-    # Use a user-writable directory for logs
-    if os.name == 'nt':  # For Windows, use AppData
-        log_dir = os.path.join(os.getenv('APPDATA'), 'SportScrapper', 'logs')
-    else:  # For Linux/Mac, use the home directory
-        log_dir = os.path.join(os.getenv('HOME'), 'SportScrapper', 'logs')
+    try:
+        # Use a user-writable directory for logs
+        if os.name == 'nt':  # For Windows, use AppData
+            log_dir = os.path.join(os.getenv('APPDATA'), 'SportScrapper', 'logs')
+        else:  # For Linux/Mac, use the home directory
+            log_dir = os.path.join(os.getenv('HOME'), 'SportScrapper', 'logs')
 
-    # Create the directory if it doesn't exist
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+        # Create the directory if it doesn't exist
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
-    # Determine log file name based on config or default to 'SportScrapperLogs.log'
-    name = config.get("logger_file_name", 'SportScrapperLogs.log')
-    log_file_path = os.path.join(log_dir, name)
+        # Determine log file name based on config or default to 'SportScrapperLogs.log'
+        name = config.get("logger_file_name", 'SportScrapperLogs.log')
+        log_file_path = os.path.join(log_dir, name)
 
-    print(f'Loading log file on dir: {log_file_path}')
-    logger = logging.getLogger(__name__)
-    logger.setLevel(log_level)
+        print(f'Attempting to load log file at: {log_file_path}')
+        logger = logging.getLogger(__name__)
+        logger.setLevel(log_level)
 
-    # Check if the logger already has handlers (to avoid duplicate logging)
-    if not logger.handlers:
-        console_handler = logging.StreamHandler()  # Logs to console
-        file_handler = RotatingFileHandler(log_file_path, maxBytes=max_file_size,
-                                           backupCount=backup_count)  # Logs to file
-        console_handler.setLevel(log_level)
-        file_handler.setLevel(log_level)
+        # Check if the logger already has handlers (to avoid duplicate logging)
+        if not logger.handlers:
+            console_handler = logging.StreamHandler()  # Logs to console
+            console_handler.setLevel(log_level)
 
-        # Define the log format
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        file_handler.setFormatter(formatter)
+            # Try opening the log file, or create a new one if it's inaccessible or too large
+            file_handler = get_file_handler(log_file_path, max_file_size, backup_count)
+            file_handler.setLevel(log_level)
 
-        # Add the handlers to the logger
-        logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
+            # Define the log format
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            file_handler.setFormatter(formatter)
+
+            # Add the handlers to the logger
+            logger.addHandler(console_handler)
+            logger.addHandler(file_handler)
+
+    except Exception as e:
+        print(f"Failed to initialize logger: {e}")
+        sys.exit(1)
+
+
+def get_file_handler(log_file_path, max_file_size, backup_count):
+    """
+    Tries to create a RotatingFileHandler. If the file is inaccessible, delete it and create a new one.
+    """
+    try:
+        # Check if the file exists and its size
+        if os.path.exists(log_file_path):
+            if os.access(log_file_path, os.W_OK):  # Check if we have write permission
+                if os.path.getsize(log_file_path) >= max_file_size:
+                    print(f"Log file {log_file_path} reached max size, rotating...")
+            else:
+                print(f"Log file {log_file_path} is inaccessible, deleting and recreating...")
+                os.remove(log_file_path)  # Delete the inaccessible file
+                create_new_log_file(log_file_path)
+        else:
+            create_new_log_file(log_file_path)
+
+        # Create a RotatingFileHandler that automatically rotates the log file
+        return RotatingFileHandler(log_file_path, maxBytes=max_file_size, backupCount=backup_count)
+
+    except (IOError, OSError) as e:
+        print(f"Failed to create or access log file {log_file_path}: {str(e)}")
+        sys.exit(1)
+
+
+def create_new_log_file(log_file_path):
+    """
+    Creates a new log file and grants full permissions to the file.
+    """
+    try:
+        with open(log_file_path, 'w') as new_log_file:
+            new_log_file.write('')  # Create an empty file
+        # Set permissions: read, write, and execute for everyone (777)
+        os.chmod(log_file_path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # Set file permissions to 777
+        print(f"New log file {log_file_path} created with full permissions.")
+
+    except Exception as e:
+        print(f"Failed to create new log file: {e}")
+        sys.exit(1)
 
 
 def initDB():
