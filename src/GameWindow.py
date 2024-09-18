@@ -1,11 +1,13 @@
 import sys
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget, QTreeWidget, QTreeWidgetItem, QHBoxLayout, QScrollArea, \
-    QTableWidget, QTableWidgetItem
-from PyQt5.QtCore import Qt, pyqtSlot
+    QTableWidget, QTableWidgetItem, QMessageBox
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 
 
 class GameWindow(QWidget):
+    stop_playing = pyqtSignal()
+
     def __init__(self, logger, elements, translation):
         super().__init__()
         self.translation = translation
@@ -31,6 +33,30 @@ class GameWindow(QWidget):
 
     def close_windows(self):
         self.close()
+
+    def closeEvent(self, event):
+        # This method is called when the window is about to close
+        reply = QMessageBox.question(self, 'Exit Confirmation',
+                                     "Are you sure you want to quit?",
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            try:
+                # Accept the close event and allow the window to close
+                event.accept()
+                self.logger.info("Window closed. Stopping program...")
+                self.stop_playing.emit()
+                self.logger.info("Program closed successfully.")
+                sys.exit(0)
+            except Exception as e:
+                self.logger.info(f"Failed to stop program...Error: {e}")
+                sys.exit(1)
+
+        else:
+            # Ignore the close event and prevent the window from closing
+            event.ignore()
+            print("Window close cancelled")
 
     def init_ui(self):
         try:
@@ -124,7 +150,7 @@ class GameWindow(QWidget):
             self.logger.error(f'Failed to initialize game window UI on init_ui. Error: {str(e)}')
             sys.exit(1)
 
-    @pyqtSlot(dict, dict)  # Mark the function as a slot that can be called from another thread
+    @pyqtSlot(dict, dict)
     def update_game_data(self, basketballLeagues, marked_games):
         """Updates both leagues and marked games safely."""
         try:
@@ -219,7 +245,8 @@ class GameWindow(QWidget):
                     league_item = QTreeWidgetItem([league])
 
                     # Highlight leagues with marked games
-                    if any(game_mark_data[self.elements['consts']['league_name']] == league for (game_key, game_mark_data)
+                    if any(game_mark_data[self.elements['consts']['league_name']] == league for
+                           (game_key, game_mark_data)
                            in marked_games.items()):
                         league_item.setBackground(0, Qt.green)
 
@@ -250,7 +277,8 @@ class GameWindow(QWidget):
                                 for row_index, (key, _) in enumerate(games.items()):
                                     if key == game_key:
                                         for col_index in range(game_table.columnCount()):
-                                            game_table.item(row_index, col_index).setBackground(Qt.yellow)  # Highlight row
+                                            game_table.item(row_index, col_index).setBackground(
+                                                Qt.yellow)  # Highlight row
 
                         self.league_games_layout.addWidget(game_table)
 

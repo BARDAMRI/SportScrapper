@@ -1,11 +1,10 @@
 import platform
 import time
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, \
     ElementClickInterceptedException, StaleElementReferenceException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.webdriver.edge.service import Service as EdgeService
@@ -14,14 +13,13 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.safari.webdriver import WebDriver as SafariDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 
 class PlayManager(QObject):  # Inherit QObject for threading
     finished = pyqtSignal()  # Signal to emit when the PlayManager is done
-    data_updated = pyqtSignal(dict, dict)  # Signal will emit basketballLeagues and marked_games
+    data_updated = pyqtSignal(dict, dict)
 
     def __init__(self, logger, max_try_count, elements, point_difference, refreshTime, game_window):
         super().__init__()  # Initialize QObject
@@ -221,6 +219,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
         self.driver.quit()
         return False
 
+    @pyqtSlot()
     def stop(self):
         """Stops the infinite loop in the play method."""
         self.logger.info('Stopping the game loop...')
