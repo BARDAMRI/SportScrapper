@@ -25,6 +25,7 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium import webdriver
 
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
+trans_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
 
 print(f'os.cwd : {os.getcwd()}')
 logger = None
@@ -53,15 +54,14 @@ thread = None
 
 
 def init_configurations():
-    global config, translations, config_path, game_window
+    global config, translations, config_path, trans_path, game_window, logger
     try:
-        print(f'loading config file on path {config_path}')
+        logger.info(f'loading config file on path {config_path} and translations on path {trans_path}')
         with open(config_path, 'r') as file:
             config = json.load(file)
             print("Configurations loaded successfully:", config)
             try:
-                translations_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
-                with open(translations_path, 'r') as f:
+                with open(trans_path, 'r') as f:
                     translations = json.load(f)
                     print(f'Translations: {translations}')
             except FileNotFoundError as err:
@@ -75,9 +75,9 @@ def init_configurations():
                     game_window.close_windows()
                 sys.exit(1)
     except FileNotFoundError:
-        print(f"Error: The configurations file '{translations_path}' was not found.")
+        print(f"Error: The configurations file '{trans_path}' was not found.")
     except json.JSONDecodeError:
-        print(f"Error: The configurations file '{translations_path}' contains invalid JSON.")
+        print(f"Error: The configurations file '{trans_path}' contains invalid JSON.")
     except Exception as err:
         print(f"An unexpected error occurred during configurations file loading: {err}")
 
@@ -97,7 +97,7 @@ def initialize_logger(log_level=logging.INFO, max_file_size=5 * 1024 * 1024, bac
             os.makedirs(log_dir)
 
         # Determine log file name based on config or default to 'SportScrapperLogs.log'
-        name = config.get("logger_file_name", 'SportScrapperLogs.log')
+        name =  'SportScrapperLogs.log'
         log_file_path = os.path.join(log_dir, name)
 
         print(f'Attempting to load log file at: {log_file_path}')
@@ -520,8 +520,8 @@ if __name__ == '__main__':
     global cluster_name, collection_name, client, db, collection, config, manager, logger, game_window
     try:
         try:
-            init_configurations()
             initialize_logger()
+            init_configurations()
             if logger:
                 logger.info('Configurations file and translation were loaded successfully!')
             else:
