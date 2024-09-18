@@ -58,7 +58,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
     def configure_options(self):
         """Configure browser options for headless mode and other flags."""
         for options in [self.chrome_options, self.firefox_options, self.edge_options]:
-            # options.add_argument("--headless")
+            options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
