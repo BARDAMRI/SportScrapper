@@ -1,16 +1,22 @@
-import time
 import platform
+import time
 from PyQt5.QtCore import QObject, pyqtSignal
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, \
     ElementClickInterceptedException, StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
-import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.safari.webdriver import WebDriver as SafariDriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 
 class PlayManager(QObject):  # Inherit QObject for threading
@@ -37,42 +43,93 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
         # Make the window fullscreen and headless
 
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # This makes the browser invisible
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-software-rasterizer")
+        self.system_type = platform.system()  # Store system type
+        self.driver = None
+        self.chrome_options = ChromeOptions()
+        self.firefox_options = FirefoxOptions()
+        self.edge_options = EdgeOptions()
+        self.configure_options()  # Configure options for headless mode
+
         # Create driver with retry logic
         self.driver = None
-        if not self.retry_driver(chrome_options):
+        if not self.retry_driver():
             raise Exception('Failed to load the Web Driver. Exiting...')
 
-    def retry_driver(self, chrome_options):
+    def configure_options(self):
+        """Configure browser options for headless mode and other flags."""
+        for options in [self.chrome_options, self.firefox_options, self.edge_options]:
+            # options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--disable-software-rasterizer")
+
+    def retry_driver(self):
         """Retries launching the WebDriver up to max_attempts in case of failure."""
+        attempt_count = 0
+
+        while not self.driver and attempt_count < self.max_attempts:
+            try:
+                # Load the appropriate WebDriver based on the system type
+                if self.system_type == 'Windows':
+                    self.driver = self.load_chrome() or self.load_edge() or self.load_firefox()
+                elif self.system_type == 'Linux':
+                    self.driver = self.load_chrome() or self.load_firefox()
+                elif self.system_type == 'Darwin':  # macOS
+                    self.driver = self.load_chrome() or self.load_safari() or self.load_firefox()
+
+                if self.driver:
+                    self.logger.info(f"{self.system_type} WebDriver successfully launched.")
+                    return True
+            except (WebDriverException, Exception) as e:
+                self.logger.error(
+                    f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {self.max_attempts}.")
+                attempt_count += 1
+
+        self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
+        return False
+
+    def load_chrome(self):
+        """Attempts to load the Chrome WebDriver."""
         try:
-            attempt_count = 0
-            while not self.driver and attempt_count < self.max_attempts:
-                try:
+            self.logger.info("Attempting to launch Chrome WebDriver...")
+            service = webdriver.ChromeService()
+            driver = webdriver.Chrome(service=service, options=self.chrome_options)
+            return driver
+        except WebDriverException as e:
+            self.logger.error(f"Chrome WebDriver failed: {str(e)}")
+            return None
 
-                    # Initialize the WebDriver
-                    self.driver = webdriver.Chrome(Service(ChromeDriverManager().install()), options=chrome_options)
-                    # self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                    #                                options=chrome_options)
-                    self.logger.info("Chrome WebDriver successfully launched.")
-                except WebDriverException as e:
-                    self.logger.error(
-                        f"WebDriver failed to launch: {str(e)}. Attempt {attempt_count + 1} of {self.max_attempts}.")
-                    attempt_count += 1
+    def load_firefox(self):
+        """Attempts to load the Firefox WebDriver."""
+        try:
+            self.logger.info("Attempting to launch Firefox WebDriver...")
+            return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()),
+                                     options=self.firefox_options)
+        except WebDriverException as e:
+            self.logger.error(f"Firefox WebDriver failed: {str(e)}")
+            return None
 
-            if not self.driver:
-                self.logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
-                return False
-            else:
-                self.logger.info("WebDriver launched successfully.")
-                return True
-        except Exception as e:
-            self.logger.error(f'Received an error during loading the browser driver in retry_driver.Error: {e}')
+    def load_edge(self):
+        """Attempts to load the Edge WebDriver on Windows."""
+        if self.system_type == 'Windows':
+            try:
+                self.logger.info("Attempting to launch Edge WebDriver...")
+                return webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()),
+                                      options=self.edge_options)
+            except WebDriverException as e:
+                self.logger.error(f"Edge WebDriver failed: {str(e)}")
+                return None
+
+    def load_safari(self):
+        """Attempts to load the Safari WebDriver on macOS."""
+        if self.system_type == 'Darwin':
+            try:
+                self.logger.info("Attempting to launch Safari WebDriver...")
+                return SafariDriver()
+            except WebDriverException as e:
+                self.logger.error(f"Safari WebDriver failed: {str(e)}")
+                return None
 
     def open_live_events_window(self, attempt_count, max_attempts, required_substring):
         while attempt_count < max_attempts:
@@ -168,6 +225,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
         """Stops the infinite loop in the play method."""
         self.logger.info('Stopping the game loop...')
         self.stop_flag = True
+        if self.driver:
+            self.driver.quit()
 
     def play(self):
         self.logger.info('Starting game monitoring...')

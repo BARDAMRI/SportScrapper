@@ -295,8 +295,9 @@ def open_welcome_window():
 
 
 def start_application():
+    global game_window, logger, config, translations, language
     try:
-        global game_window, logger, config, translations, language
+
         # Create and display the game window immediately after access verification
         game_window = GameWindow(logger=logger, elements=config['elements'], translation=translations[language])
         game_window.show()
@@ -314,8 +315,6 @@ def start_application():
         logger.error(f'Failed to initialize the game.. Received error : ${str(e)}')
         if thread:
             thread.quit()
-        if game_window:
-            game_window.close_windows()
         sys.exit(1)
 
 
