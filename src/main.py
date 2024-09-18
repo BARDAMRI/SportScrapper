@@ -517,7 +517,6 @@ def start_application():
 
 
 if __name__ == '__main__':
-    global cluster_name, collection_name, client, db, collection, config, manager, logger, game_window
     try:
         try:
             initialize_logger()
