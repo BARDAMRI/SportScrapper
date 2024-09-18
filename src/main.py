@@ -27,8 +27,20 @@ from selenium import webdriver
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
 
 print(f'os.cwd : {os.getcwd()}')
-global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager
-
+logger = None
+config = None
+cluster_name = None
+collection_name = None
+client = None
+db = None
+collection = None
+root = None
+header = None
+welcome_message = None
+start_button = None
+window = None
+game_window = None
+manager = None
 language = 'he'
 language_button = '🇮🇱'
 translations = {}
@@ -51,6 +63,7 @@ def init_configurations():
                 translations_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
                 with open(translations_path, 'r') as f:
                     translations = json.load(f)
+                    print(f'Translations: {translations}')
             except FileNotFoundError as err:
                 print(f"Error: translations.json file not found: {str(err)}")
                 if game_window:
@@ -390,12 +403,9 @@ def on_closing():
         sys.exit(1)
 
 
-    except Exception as err:
-        logger.error(f'Failed to close program peacefully. \nError : {err}')
-
-
 def open_welcome_window():
     global header, welcome_message, start_button, language, translations, window, language_button
+
 
     try:
         app = QApplication(sys.argv)
@@ -477,7 +487,7 @@ def open_welcome_window():
 
     except Exception as err:
         logger.error(f'Error on UI window open in open_welcome_window. Error : {str(err)}')
-        print(f'Error on UI window open in open_welcome_window. Error : {str(e)}')
+        print(f'Error on UI window open in open_welcome_window. Error : {str(err)}')
         time.sleep(5)
 
 
