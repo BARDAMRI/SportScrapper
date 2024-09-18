@@ -2,11 +2,11 @@ import sys
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget, QTreeWidget, QTreeWidgetItem, QHBoxLayout, QScrollArea, \
     QTableWidget, QTableWidgetItem, QMessageBox
-from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QEventLoop, QTimer
 
 
 class GameWindow(QWidget):
-    stop_playing = pyqtSignal()
+    window_closed = pyqtSignal()
 
     def __init__(self, logger, elements, translation):
         super().__init__()
@@ -35,28 +35,23 @@ class GameWindow(QWidget):
         self.close()
 
     def closeEvent(self, event):
-        # This method is called when the window is about to close
-        reply = QMessageBox.question(self, 'Exit Confirmation',
-                                     "Are you sure you want to quit?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
+        # Display a confirmation dialog
+        reply = QMessageBox.question(self, self.translation['Exit Confirmation'],
+                                     self.translation["Are you sure you want to quit?"],
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             try:
-                # Accept the close event and allow the window to close
-                event.accept()
-                self.logger.info("Window closed. Stopping program...")
-                self.stop_playing.emit()
-                self.logger.info("Program closed successfully.")
-                sys.exit(0)
+                # Emit the window_closed signal first to trigger stopping of the PlayManager
+                self.logger.info("Emitting window_closed signal to stop PlayManager...")
+                self.window_closed.emit()
+                self.logger.info("Background tasks completed, closing window...")
+                event.accept()  # Accept the event, so the window closes
             except Exception as e:
-                self.logger.info(f"Failed to stop program...Error: {e}")
+                self.logger.error(f"Failed to stop the program...Error: {str(e)}")
                 sys.exit(1)
-
         else:
-            # Ignore the close event and prevent the window from closing
             event.ignore()
-            print("Window close cancelled")
 
     def init_ui(self):
         try:

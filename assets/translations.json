@@ -23,7 +23,9 @@
     "time_left_when_recorded": "Time Left When Recorded",
     "Marked Games": "Marked Games",
     "League Games": "League Games",
-    "Leagues": "Leagues"
+    "Leagues": "Leagues",
+    "Exit Confirmation": "Exit Confirmation",
+    "Are you sure you want to quit?": "Are you sure you want to quit?"
   },
   "he": {
     "welcome": "ברוך הבא",
@@ -49,6 +51,8 @@
     "time_left_when_recorded": "הזמן שנותר כשתועדה התוצאה",
     "Marked Games": "משחקים מסומנים להימור",
     "League Games": "משחקי הליגה",
-    "Leagues": "ליגות"
+    "Leagues": "ליגות",
+    "Exit Confirmation": "אישור יציאה",
+    "Are you sure you want to quit?": "האם אתה בטוח שברצונך לצאת?"
   }
 }

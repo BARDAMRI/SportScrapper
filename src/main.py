@@ -3,8 +3,9 @@ import os
 import logging
 import sys
 import time
-
 import certifi
+from selenium.common import WebDriverException
+
 from PlayManager import PlayManager
 from logging.handlers import RotatingFileHandler
 from pymongo import MongoClient
@@ -12,15 +13,31 @@ from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWid
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QThread
 from GameWindow import GameWindow
+import platform
+from webdriver_manager.firefox import GeckoDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.safari.webdriver import WebDriver as SafariDriver
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium import webdriver
 
 config_path = os.path.join(os.getcwd(), 'assets', 'config.json')
 
 print(f'os.cwd : {os.getcwd()}')
-global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager, thread
+global logger, config, cluster_name, collection_name, client, db, collection, root, header, welcome_message, start_button, window, game_window, manager
 
 language = 'he'
 language_button = '🇮🇱'
 translations = {}
+system_type = platform.system()  # Store system type
+driver = None
+chrome_options = ChromeOptions()
+firefox_options = FirefoxOptions()
+edge_options = EdgeOptions()
+thread = None
 
 
 def init_configurations():
@@ -34,13 +51,13 @@ def init_configurations():
                 translations_path = os.path.join(os.getcwd(), 'assets', 'translations.json')
                 with open(translations_path, 'r') as f:
                     translations = json.load(f)
-            except FileNotFoundError as e:
-                print(f"Error: translations.json file not found: {str(e)}")
+            except FileNotFoundError as err:
+                print(f"Error: translations.json file not found: {str(err)}")
                 if game_window:
                     game_window.close_windows()
                 sys.exit(1)
-            except json.JSONDecodeError as e:
-                print(f"Error: Invalid JSON in translations.json: {str(e)}")
+            except json.JSONDecodeError as err:
+                print(f"Error: Invalid JSON in translations.json: {str(err)}")
                 if game_window:
                     game_window.close_windows()
                 sys.exit(1)
@@ -48,8 +65,8 @@ def init_configurations():
         print(f"Error: The configurations file '{translations_path}' was not found.")
     except json.JSONDecodeError:
         print(f"Error: The configurations file '{translations_path}' contains invalid JSON.")
-    except Exception as e:
-        print(f"An unexpected error occurred during configurations file loading: {e}")
+    except Exception as err:
+        print(f"An unexpected error occurred during configurations file loading: {err}")
 
 
 def initialize_logger(log_level=logging.INFO, max_file_size=5 * 1024 * 1024, backup_count=5):
@@ -107,11 +124,11 @@ def initDB():
             logger.info('Connection to db succeeded.')
         else:
             print('Connection to db succeeded.')
-    except Exception as e:
+    except Exception as err:
         if logger:
-            logger.warning(f'Connection to db failed: {e}')
+            logger.warning(f'Connection to db failed: {err}')
         else:
-            print(f'Connection to db failed: {e}')
+            print(f'Connection to db failed: {err}')
         if game_window:
             game_window.close_windows()
         sys.exit(1)
@@ -136,38 +153,141 @@ def verify_access():
             else:
                 print("Access denied. Exiting the program.")
             return False
-    except Exception as e:
+    except Exception as err:
         if logger:
-            logger.error(f"Error during access verification: {e}")
+            logger.error(f"Error during access verification: {err}")
         else:
             print("Access denied. Exiting the program.")
         return False
 
 
-def start_scrapping():
-    global game_window, manager, thread
+def configure_options():
+    global chrome_options, firefox_options, edge_options
+    """Configure browser options for headless mode and other flags."""
+    for options in [chrome_options, firefox_options, edge_options]:
+        # options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-software-rasterizer")
 
-    # Create a QThread object
+
+def retry_driver():
+    global driver, system_type, logger
+
+    max_attempts = config['max_retry_number']
+    """Retries launching the WebDriver up to max_attempts in case of failure."""
+    attempt_count = 0
+
+    while not driver and attempt_count < max_attempts:
+        try:
+            # Load the appropriate WebDriver based on the system type
+            if system_type == 'Windows':
+                driver = load_chrome() or load_edge() or load_firefox()
+            elif system_type == 'Linux':
+                driver = load_chrome() or load_firefox()
+            elif system_type == 'Darwin':  # macOS
+                driver = load_chrome() or load_safari() or load_firefox()
+
+            if driver:
+                logger.info(f"{system_type} WebDriver successfully launched.")
+                return True
+        except (WebDriverException, Exception) as err:
+            logger.error(
+                f"WebDriver failed to launch: {str(err)}. Attempt {attempt_count + 1} of {max_attempts}.")
+            attempt_count += 1
+
+    logger.critical("Failed to launch WebDriver after several attempts. Exiting program.")
+    return False
+
+
+def load_chrome():
+    global logger, chrome_options
+    """Attempts to load the Chrome WebDriver."""
+    try:
+        logger.info("Attempting to launch Chrome WebDriver...")
+        service = webdriver.ChromeService()
+        return webdriver.Chrome(service=service, options=chrome_options)
+    except WebDriverException as err:
+        logger.error(f"Chrome WebDriver failed: {str(err)}")
+        return None
+
+
+def load_firefox():
+    global logger, firefox_options
+    """Attempts to load the Firefox WebDriver."""
+    try:
+        logger.info("Attempting to launch Firefox WebDriver...")
+        return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()),
+                                 options=firefox_options)
+    except WebDriverException as err:
+        logger.error(f"Firefox WebDriver failed: {str(err)}")
+        return None
+
+
+def load_edge():
+    global system_type, logger, edge_options
+    """Attempts to load the Edge WebDriver on Windows."""
+    if system_type == 'Windows':
+        try:
+            logger.info("Attempting to launch Edge WebDriver...")
+            return webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()),
+                                  options=edge_options)
+        except WebDriverException as err:
+            logger.error(f"Edge WebDriver failed: {str(err)}")
+            return None
+
+
+def load_safari():
+    global logger, system_type
+    """Attempts to load the Safari WebDriver on macOS."""
+    if system_type == 'Darwin':
+        try:
+            logger.info("Attempting to launch Safari WebDriver...")
+            return SafariDriver()
+        except WebDriverException as err:
+            logger.error(f"Safari WebDriver failed: {str(err)}")
+            return None
+
+
+def on_game_window_closed():
+    global driver, thread
+    logger.info("Game window closed. Cleaning up resources...")
+    manager.stop()
+    if driver:
+        driver.quit()
+
+
+def start_scrapping():
+    global game_window, manager, thread, driver
+    if thread and thread.isRunning():
+        thread.quit()
+        thread.wait()
     thread = QThread()
+    configure_options()
+
+    # Create driver with retry logic
+    driver = None
+    if not retry_driver():
+        raise Exception('Failed to load the Web Driver. Exiting...')
 
     # Create the PlayManager instance
-    manager = PlayManager(logger=logger, max_try_count=config['max_retry_number'], elements=config['elements'],
+    manager = PlayManager(driver=driver, logger=logger, max_try_count=config['max_retry_number'],
+                          elements=config['elements'],
                           point_difference=config['point_difference'],
                           refreshTime=config['time_between_refreshes_in_sec'], game_window=game_window)
     manager.data_updated.connect(game_window.update_game_data)
-    # Move the PlayManager instance to the QThread
+    game_window.window_closed.connect(on_game_window_closed)
     manager.moveToThread(thread)
 
-    # Connect signals and slots
-    thread.started.connect(manager.play)  # Start the PlayManager's play method when the thread starts
-    manager.finished.connect(thread.quit)  # Quit the thread when PlayManager emits 'finished'
-    manager.finished.connect(manager.deleteLater)  # Delete PlayManager after finishing
-    thread.finished.connect(thread.deleteLater)  # Delete the thread when it's done
+    thread.started.connect(manager.play)
+    manager.finished.connect(thread.quit)
+    manager.finished.connect(thread.deleteLater)
+    thread.finished.connect(thread.deleteLater)
 
-    # Start the thread
     thread.start()
 
-    # Perform login
+    # Perform login and start
     init_succeeded = manager.login(config['url'], config['basketball'], config['username'], config['password'])
 
     if init_succeeded and thread:
@@ -199,12 +319,32 @@ def update_ui_language():
 
 
 def on_closing():
-    logger.info("Window is closing")
-    if thread.isRunning():
-        manager.stop()  # Safely stop the PlayManager thread
-        thread.quit()
-        thread.wait()  # Ensure the thread is stopped before exiting
-    sys.exit()
+    global driver, logger, thread, manager
+    try:
+        logger.info("Closing program...")
+
+        if manager:  # Ensure the PlayManager stops its work
+            logger.info("Stopping PlayManager...")
+            manager.stop_flag = True  # Set the stop flag to True
+
+        if thread and thread.isRunning():
+            logger.info("Stopping thread...")
+            thread.quit()  # This stops the thread's event loop
+            thread.wait()  # Wait for the thread to finish
+
+        if driver:
+            logger.info("Closing driver...")
+            driver.quit()
+
+        logger.info("Exiting application...")
+        sys.exit(0)
+    except Exception as err:
+        logger.error(f'Failed to close program peacefully. Error : {err}')
+        sys.exit(1)
+
+
+    except Exception as err:
+        logger.error(f'Failed to close program peacefully. \nError : {err}')
 
 
 def open_welcome_window():
@@ -288,14 +428,14 @@ def open_welcome_window():
 
         sys.exit(app.exec_())
 
-    except Exception as e:
-        logger.error(f'Error on UI window open in open_welcome_window. Error : {str(e)}')
+    except Exception as err:
+        logger.error(f'Error on UI window open in open_welcome_window. Error : {str(err)}')
         print(f'Error on UI window open in open_welcome_window. Error : {str(e)}')
         time.sleep(5)
 
 
 def start_application():
-    global game_window, logger, config, translations, language
+    global game_window, logger, config, translations, language, thread
     try:
 
         # Create and display the game window immediately after access verification
@@ -311,23 +451,16 @@ def start_application():
                 game_window.close_windows()
             sys.exit(1)  # Ensure the program exits if access is denied
 
-    except Exception as e:
-        logger.error(f'Failed to initialize the game.. Received error : ${str(e)}')
+    except Exception as err:
+        logger.error(f'Failed to initialize the game.. Received error : ${str(err)}')
         if thread:
             thread.quit()
+            thread.wait()
         sys.exit(1)
 
 
-def start_program_and_play():
-    open_welcome_window()
-
-
-def open_ui():
-    open_welcome_window()
-
-
 if __name__ == '__main__':
-    global cluster_name, collection_name, client, db, collection, config, thread, manager, logger, game_window
+    global cluster_name, collection_name, client, db, collection, config, manager, logger, game_window
     try:
         try:
             init_configurations()
@@ -348,7 +481,7 @@ if __name__ == '__main__':
         try:
             if config and config['url'] and config['username'] and config['password']:
                 if verify_access():
-                    start_program_and_play()
+                    open_welcome_window()
                 else:
                     if game_window:
                         game_window.close_windows()
