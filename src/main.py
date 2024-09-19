@@ -225,7 +225,7 @@ def configure_options():
     global chrome_options, firefox_options, edge_options
     """Configure browser options for headless mode and other flags."""
     for options in [chrome_options, firefox_options, edge_options]:
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
