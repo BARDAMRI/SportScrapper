@@ -57,11 +57,11 @@ def init_configurations():
     global config, translations, config_path, trans_path, game_window, logger
     try:
         logger.info(f'loading config file on path {config_path} and translations on path {trans_path}')
-        with open(config_path, 'r') as file:
+        with open(config_path, 'r', encoding='utf-8') as file:
             config = json.load(file)
             print("Configurations loaded successfully:", config)
             try:
-                with open(trans_path, 'r') as f:
+                with open(trans_path, 'r', encoding='utf-8') as f:
                     translations = json.load(f)
                     print(f'Translations: {translations}')
             except FileNotFoundError as err:
