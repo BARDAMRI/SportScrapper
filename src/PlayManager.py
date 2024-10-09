@@ -202,8 +202,10 @@ class PlayManager(QObject):  # Inherit QObject for threading
     def collect_game_info(self, game_index, game, league_name, current_games_lists):
         """Helper method to collect information for a specific game."""
         try:
+            self.logger.info(f'Clicking game at league {league_name} at index {game_index}.')
             game.click()
             # Collect game data
+            self.logger.info(f'Starting collect game data...')
             first_team_name = game.find_element(By.CLASS_NAME, self.elements["consts"]['first_team_name_class']).text
             second_team_name = game.find_element(By.CLASS_NAME, self.elements["consts"]['second_team_name_class']).text
             team_scores = game.find_elements(By.CLASS_NAME, self.elements["consts"]['game_scores_pair_section'])
@@ -213,16 +215,22 @@ class PlayManager(QObject):  # Inherit QObject for threading
             quarter_number = game.find_element(By.CLASS_NAME, self.elements["consts"]['quarter_number_class']).text
             time_left = game.find_element(By.CLASS_NAME, self.elements["consts"]['time_left_class']).text
 
+            self.logger.info(f'Creating key...')
             game_key = f"{first_team_name} vs {second_team_name}"
 
+            self.logger.info(f'Inserting into games list...')
             if league_name not in current_games_lists:
                 current_games_lists[league_name] = []
             if game_key not in current_games_lists[league_name]:
                 current_games_lists[league_name].append(game_key)
 
+            self.logger.info(f'Inserting into games list...')
             if (first_team_name == '' or second_team_name == '' or first_team_score == 'N/A' or
                     second_team_score == 'N/A' or quarter_number == 'NS' or time_left == '--:--'):
+                self.logger.info(f'The game {game_key} has no 2 team names or score. cannot collect. ')
                 return
+
+            self.logger.info(f'Creating game object...')
             game_data = {
                 self.elements['consts']['first_team']: first_team_name,
                 self.elements['consts']['second_team']: second_team_name,
@@ -233,6 +241,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                 self.elements['consts']['time_left']: time_left
             }
 
+            self.logger.info(f'Updating game on collections')
             # Add new game or update existing one
             if game_key in self.basketballLeagues[league_name]:
                 self.update_game_data(game_key, game_data, league_name)
@@ -241,7 +250,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
         except (ElementClickInterceptedException, NoSuchElementException, TimeoutException, Exception) as e:
             self.logger.warning(
-                f"Exception on collect_game_info for game at index {game_index} in league {league_name}."
+                f"Exception on collect_game_info for game at index {game_index} in league {league_name}: {e}"
                 f" Retrying...")
             time.sleep(1)
             self.collect_game_info(game_index, game, league_name, current_games_lists)  # Retry
@@ -300,19 +309,22 @@ class PlayManager(QObject):  # Inherit QObject for threading
             self.logger.error(f"Error updating game data {game_key}: {str(e)}")
 
     def check_table_mark(self, league_name, game_key, game_data):
-        if (self.elements['consts']['first_total_score'] and self.elements['consts']['first_total_score'] in game_data
-                and game_data[self.elements['consts']['first_total_score']]):
-            # Find the suitable row for betting
-            selected_row = self.find_selected_total_row(
-                game_data[self.elements['consts']['first_total_score']])
-            if selected_row:
-                # Mark the game for betting
-                self.marked_games[game_key] = {
-                    self.elements['consts']['league_name']: league_name,
-                    self.elements['consts']['selected_row_field']: selected_row
-                }
-                self.logger.debug(
-                    f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
+        try:
+            if (self.elements['consts']['first_total_score'] and self.elements['consts']['first_total_score'] in game_data
+                    and game_data[self.elements['consts']['first_total_score']]):
+                # Find the suitable row for betting
+                selected_row = self.find_selected_total_row(
+                    game_data[self.elements['consts']['first_total_score']])
+                if selected_row:
+                    # Mark the game for betting
+                    self.marked_games[game_key] = {
+                        self.elements['consts']['league_name']: league_name,
+                        self.elements['consts']['selected_row_field']: selected_row
+                    }
+                    self.logger.debug(
+                        f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
+        except Exception as e:
+            self.logger.warn(f'Exception during check_table_mark: {e}')
 
     def handle_selected_rows(self):
         """Selects the suitable rows from the total table based on game data."""
@@ -334,7 +346,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
                                 self.logger.debug(
                                     f"Marked Game: {game_key} in League: {league_name}, Selected Row: {selected_row}")
         except Exception as e:
-            self.logger.warning(f"Error selecting total row for betting: {e}")
+            self.logger.warning(f"Error selecting total row for betting in handle_selected_rows: {e}")
 
     def clean_up_inactive_games(self, active_games):
         """Remove games that are no longer active from the dictionary."""
