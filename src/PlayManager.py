@@ -167,7 +167,7 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
                     # Close the previous league if it was opened
                     if (previous_league_header and self.elements["consts"][
-                        'collapsed_league_class'] in previous_league_header.get_attribute('class')):
+                            'collapsed_league_class'] in previous_league_header.get_attribute('class')):
                         previous_league_header.click()
 
                     # Expand the current league if it's collapsed
@@ -310,7 +310,8 @@ class PlayManager(QObject):  # Inherit QObject for threading
 
     def check_table_mark(self, league_name, game_key, game_data):
         try:
-            if (self.elements['consts']['first_total_score'] and self.elements['consts']['first_total_score'] in game_data
+            if (self.elements['consts']['first_total_score'] and self.elements['consts'][
+                'first_total_score'] in game_data
                     and game_data[self.elements['consts']['first_total_score']]):
                 # Find the suitable row for betting
                 selected_row = self.find_selected_total_row(

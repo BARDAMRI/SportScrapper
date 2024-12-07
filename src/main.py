@@ -14,12 +14,10 @@ from PlayManager import PlayManager
 from PyQt5.QtCore import Qt, QThread
 from selenium.common import WebDriverException
 from logging.handlers import RotatingFileHandler
-from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.webdriver.edge.service import Service as EdgeService
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service as FirefoxService
@@ -268,7 +266,8 @@ def load_chrome():
     """Attempts to load the Chrome WebDriver."""
     try:
         logger.info("Attempting to launch Chrome WebDriver...")
-        return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+        service = webdriver.ChromeService()
+        return webdriver.Chrome(service=service, options=chrome_options)
     except WebDriverException as err:
         logger.error(f"Chrome WebDriver failed: {str(err)}")
         return None
